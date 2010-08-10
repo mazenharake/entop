@@ -41,4 +41,7 @@ POSSIBILITY OF SUCH DAMAGE.
 Just run make.
 
 == Example ==
-Later...
+Run ntop. Make sure to edit it first to change paths etc.
+
+> ./ntop foo@host
+

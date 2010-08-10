@@ -1,0 +1,7 @@
+#!/home/mazen/lib/erlang-12B-5/bin/escript
+%%! -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ -sname ntop -setcookie cookie +A 50
+main([Node]) -> 
+    ntop:start(list_to_atom(Node), []);
+main(_) -> 
+    io:format("Usage: ./ntop <NODE>").
+	   

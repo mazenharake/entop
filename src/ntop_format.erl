@@ -22,55 +22,48 @@
 %% ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
 
--module(ntop).
--include("ntop.hrl").
+-module(ntop_format).
 -include_lib("cecho/include/cecho.hrl").
 
-%% Application API
--export([start/2]).
+%% Module API
+-export([init/0, header/2, row/2]).
+
+%% Records
+-record(state, { cache = [] }).
 
 %% =============================================================================
-%% Application API
+%% Module API
 %% =============================================================================
-start(Node, Options) ->
-    State = (read_options(Options))#state{ node = Node },
-    case net_kernel:connect(foo@pasha) of
-	true ->
-	    ViewPid = ntop_view:start(State),
-	    control(ViewPid);
-	false ->
-	    erlang:error({unable_to_connect, Node})
-    end.
+init() ->
+    Columns = [{"Pid", 15, [{align, right}]},
+	       {"Name", 15, []},
+	       {"Reductions", 10, []},
+	       {"Queue", 5, []},
+	       {"HSize", 5, []},
+	       {"SSize", 5, []},
+	       {"HTot", 5, []}],
+    {ok, Columns, #state{}}.
 
-read_options(Options) ->
-    read_options(Options, #state{}).
+%% Header Callback
+header(SystemInfo, State) ->
+    Row1 = io_lib:format("Process Count: ~p", [proplists:get_value(process_count, SystemInfo, 0)]),
+    Row2 = io_lib:format("Uptime: ~p", [element(1, proplists:get_value(uptime, SystemInfo, 0))]),
+    Row3 = "",
+    Row4 = "",
+    {ok, [ lists:flatten(Row) || Row <- [Row1, Row2, Row3, Row4] ], State}.
 
-read_options([], State) ->
-    State;
-read_options([{interval, Intv} | Rest], State) when is_integer(Intv) andalso Intv > 500 andalso
-						    (Intv rem 500) == 0 ->
-    read_options(Rest, State#state{ interval = Intv });
-read_options([{interval, Intv}|_], _) ->
-    erlang:error({badarg, {invalid_interval, Intv}});
-read_options([{sort, Way} | Rest], State) when Way == reductions orelse Way == memory orelse %
-					       Way == foo orelse Way == bar ->
-    read_options(Rest, State#state{ sort = Way });
-read_options([Option|_],_) ->
-    erlang:error({badarg, {invalid_option, Option}}).
-
-control(ViewPid) ->
-    P = cecho:getch(),
-    case P of
-	N when N >= 49 andalso N =< 57 -> ViewPid ! {sort, N - 48};
-	$> -> ViewPid ! {sort, next};
-	$< -> ViewPid ! {sort, prev};
-	$r -> ViewPid ! reverse_sort;
-	$q -> exit(ViewPid, normal),
-	      application:stop(cecho),
-	      exit(normal);
-	_ -> ViewPid ! force_update
-    end,
-    control(ViewPid).
-
-
-
+%% Column Specific Callbacks
+row(ProcessInfo, State) ->
+    Pid = erlang:pid_to_list(proplists:get_value(pid, ProcessInfo)),
+    RegName = case proplists:get_value(registered_name, ProcessInfo) of
+		  undefined ->
+		      "N/A";
+		  Name ->
+		      atom_to_list(Name)
+	      end,
+    Reductions = proplists:get_value(reductions, ProcessInfo, 0),
+    Queue = proplists:get_value(message_queue_len, ProcessInfo, 0),
+    Heap = proplists:get_value(heap_size, ProcessInfo, 0),
+    Stack = proplists:get_value(stack_size, ProcessInfo, 0),
+    HeapTot = proplists:get_value(total_heap_size, ProcessInfo, 0),    
+    {ok, {Pid, RegName, Reductions, Queue, Heap, Stack, HeapTot}, State}.

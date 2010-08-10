@@ -2,7 +2,7 @@
 
 BEAMS       := $(patsubst src/%, ebin/%, $(patsubst %.erl, %.beam, $(wildcard src/*.erl)))
 ECINCLUDES  := -I include
-ECFLAGS     := +debug_info
+ECFLAGS     := -pa ../cecho/ebin/ +debug_info
 
 all: $(BEAMS)
 

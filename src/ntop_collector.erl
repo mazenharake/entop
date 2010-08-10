@@ -22,55 +22,18 @@
 %% ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
 
--module(ntop).
--include("ntop.hrl").
--include_lib("cecho/include/cecho.hrl").
+-module(ntop_collector).
 
-%% Application API
--export([start/2]).
+%% Module API
+-export([get_data/0]).
 
 %% =============================================================================
-%% Application API
+%% Module API
 %% =============================================================================
-start(Node, Options) ->
-    State = (read_options(Options))#state{ node = Node },
-    case net_kernel:connect(foo@pasha) of
-	true ->
-	    ViewPid = ntop_view:start(State),
-	    control(ViewPid);
-	false ->
-	    erlang:error({unable_to_connect, Node})
-    end.
-
-read_options(Options) ->
-    read_options(Options, #state{}).
-
-read_options([], State) ->
-    State;
-read_options([{interval, Intv} | Rest], State) when is_integer(Intv) andalso Intv > 500 andalso
-						    (Intv rem 500) == 0 ->
-    read_options(Rest, State#state{ interval = Intv });
-read_options([{interval, Intv}|_], _) ->
-    erlang:error({badarg, {invalid_interval, Intv}});
-read_options([{sort, Way} | Rest], State) when Way == reductions orelse Way == memory orelse %
-					       Way == foo orelse Way == bar ->
-    read_options(Rest, State#state{ sort = Way });
-read_options([Option|_],_) ->
-    erlang:error({badarg, {invalid_option, Option}}).
-
-control(ViewPid) ->
-    P = cecho:getch(),
-    case P of
-	N when N >= 49 andalso N =< 57 -> ViewPid ! {sort, N - 48};
-	$> -> ViewPid ! {sort, next};
-	$< -> ViewPid ! {sort, prev};
-	$r -> ViewPid ! reverse_sort;
-	$q -> exit(ViewPid, normal),
-	      application:stop(cecho),
-	      exit(normal);
-	_ -> ViewPid ! force_update
-    end,
-    control(ViewPid).
-
-
+get_data() ->
+    Self = self(),
+    {ok, 
+     [ {process_count, erlang:system_info(process_count)},
+       {uptime, erlang:statistics(wall_clock)} ], 
+     [ [{pid,P}|erlang:process_info(P)] || P <- erlang:processes(), P /= Self ]}.
 

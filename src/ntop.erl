@@ -39,8 +39,7 @@ start(Node, Options) ->
 	    ViewPid = ntop_view:start(State),
 	    control(ViewPid);
 	false ->
-	    io:format("Unable to connect to '~p', check cookie and network.~n",
-		      [Node])
+	    halt(101)
     end.
 
 read_options(Options) ->
@@ -66,10 +65,11 @@ control(ViewPid) ->
 	$> -> ViewPid ! {sort, next}, control(ViewPid);
 	$< -> ViewPid ! {sort, prev}, control(ViewPid);
 	$r -> ViewPid ! reverse_sort, control(ViewPid);
-	$q -> exit(ViewPid, normal), application:stop(cecho), ok;
+	$q -> do_exit(ViewPid);
+	3 -> do_exit(ViewPid); %Ctrl-C
 	_ -> ViewPid ! force_update, control(ViewPid)
     end.
 
-    
-
+do_exit(ViewPid) ->
+    exit(ViewPid, normal), application:stop(cecho), halt(0).
 

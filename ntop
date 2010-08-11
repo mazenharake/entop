@@ -1,8 +1,37 @@
-#!/home/mazen/lib/erlang-14A/bin/escript
-%%! -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ -sname ntop -setcookie cookie +A 50
-main([Node]) -> 
-    ntop:start(list_to_atom(Node), []),
-    erlang:halt(1);
-main(_) -> 
-    io:format("Usage: ./ntop <NODE>").
-	   
+#!/bin/bash
+TARGETNODE=
+NAME="-sname ntop"
+COOKIE="-setcookie cookie"
+
+function usage() {
+    echo -e "Usage: ./ntop <TARGETNODE> [-name <NAME>|-sname <SNAME>] [-setcookie <COOKIE>]"
+}
+
+if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+fi
+
+TARGETNODE=$1
+shift
+
+
+for ARG in $@;
+do
+    case $ARG in
+	"-name")
+	    NAME=; ;;
+	"-sname")
+	    NAME=; ;;
+	"-setcookie")
+	    COOKIE=; ;;
+    esac
+done
+
+erl -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ +A 200 +Bc -eval "ntop:start('${TARGETNODE}',[])" $NAME $COOKIE $@
+
+CODE=$?
+if [[ $CODE == 101 ]]; then
+    echo "Unable to connect to '${NODE}', check nodename, cookie and network."
+    exit 2
+fi

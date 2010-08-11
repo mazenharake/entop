@@ -37,7 +37,7 @@ start(State) ->
     NState = load_remote_static_data(State),
     {_, Binary, Filename} = code:get_object_code(NState#state.remote_module),
     rpc:call(State#state.node, code, load_binary, [NState#state.remote_module, Filename, Binary]),
-    ViewPid = erlang:spawn_link(fun() -> init(Parent, NState) end),
+    ViewPid = erlang:spawn(fun() -> init(Parent, NState) end),
     receive continue -> ok end,
     ViewPid.
 

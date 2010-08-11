@@ -34,12 +34,13 @@
 %% =============================================================================
 start(Node, Options) ->
     State = (read_options(Options))#state{ node = Node },
-    case net_kernel:connect(foo@pasha) of
+    case net_kernel:connect(Node) of
 	true ->
 	    ViewPid = ntop_view:start(State),
 	    control(ViewPid);
 	false ->
-	    erlang:error({unable_to_connect, Node})
+	    io:format("Unable to connect to '~p', check cookie and network.~n",
+		      [Node])
     end.
 
 read_options(Options) ->
@@ -61,16 +62,14 @@ read_options([Option|_],_) ->
 control(ViewPid) ->
     P = cecho:getch(),
     case P of
-	N when N >= 49 andalso N =< 57 -> ViewPid ! {sort, N - 48};
-	$> -> ViewPid ! {sort, next};
-	$< -> ViewPid ! {sort, prev};
-	$r -> ViewPid ! reverse_sort;
-	$q -> exit(ViewPid, normal),
-	      application:stop(cecho),
-	      exit(normal);
-	_ -> ViewPid ! force_update
-    end,
-    control(ViewPid).
+	N when N >= 49 andalso N =< 57 -> ViewPid ! {sort, N - 48}, control(ViewPid);
+	$> -> ViewPid ! {sort, next}, control(ViewPid);
+	$< -> ViewPid ! {sort, prev}, control(ViewPid);
+	$r -> ViewPid ! reverse_sort, control(ViewPid);
+	$q -> exit(ViewPid, normal), application:stop(cecho), ok;
+	_ -> ViewPid ! force_update, control(ViewPid)
+    end.
 
+    
 
 

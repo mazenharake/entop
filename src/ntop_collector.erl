@@ -33,7 +33,9 @@
 get_data() ->
     Self = self(),
     {ok, 
+
      [ {process_count, erlang:system_info(process_count)},
        {uptime, erlang:statistics(wall_clock)} ], 
-     [ [{pid,P}|erlang:process_info(P)] || P <- erlang:processes(), P /= Self ]}.
+
+     [ [{pid,erlang:pid_to_list(P)}|erlang:process_info(P)] || P <- erlang:processes(), P /= Self ]}.
 

@@ -34,10 +34,9 @@
 %% =============================================================================
 start(State) ->
     Parent = self(),
-    NState = get_static_data(State),
+    NState = load_remote_static_data(State),
     {_, Binary, Filename} = code:get_object_code(NState#state.remote_module),
-    rpc:call(State#state.node, code, load_binary, [NState#state.remote_module, 
-						   Filename, Binary]),
+    rpc:call(State#state.node, code, load_binary, [NState#state.remote_module, Filename, Binary]),
     ViewPid = erlang:spawn_link(fun() -> init(Parent, NState) end),
     receive continue -> ok end,
     ViewPid.
@@ -48,29 +47,15 @@ reload(ViewPid) ->
 %% =============================================================================
 %% Internal Functions
 %% =============================================================================
-get_static_data(State) ->
-    State#state{ otp_rel = rpc:call(State#state.node, erlang, system_info, [otp_release]),
-		 version = rpc:call(State#state.node, erlang, system_info, [version])
-	       }.
-	   
 init(Parent, State) ->
-
-    %% Start Cecho and set flags
     application:start(cecho),
     ok = cecho:cbreak(),
     ok = cecho:noecho(),
     ok = cecho:curs_set(?ceCURS_INVISIBLE),
     ok = cecho:keypad(?ceSTDSCR, true),
-
-    ok = cecho:start_color(),
-
     {ok, Columns, CBState} = (State#state.callback):init(),    
-
-    %% Draw the main lines and labels
     NState = State#state{ columns = Columns, cbstate = CBState },
     draw_frame(NState),
-    
-    %% Let the waiting parent continue and go into receiving updates
     Parent ! continue,
     self() ! time_update,
     loop(Parent, NState).
@@ -98,6 +83,29 @@ loop(Parent, State) ->
 	    loop(Parent, State2)
     end.
 
+load_remote_static_data(State) ->
+    RPC = fun(M, F, A) -> rpc:call(State#state.node, M, F, A) end,
+    Otp = RPC(erlang, system_info, [otp_release]),
+    Erts = RPC(erlang, system_info, [version]),
+    {Os1, Os2} = RPC(os, type, []),
+    {Mj, Md, Mi} = RPC(os, version, []),
+    Cpus = "CPU:"++integer_to_list(RPC(erlang, system_info, [logical_processors])),
+    SMP = case RPC(erlang, system_info, [smp_support]) of
+	      false -> "";
+	      true -> " SMP"
+	  end,
+    A = " +A:"++integer_to_list(RPC(erlang, system_info, [thread_pool_size])) ,
+    K = case RPC(erlang, system_info, [kernel_poll]) of
+	    false -> "";
+	    true -> " +K"
+	end,
+    Flags = lists:concat([Cpus,SMP,A,K]),
+    State#state{ otp_version = Otp,
+		 erts_version = Erts,
+		 os_fam = Os1, os = Os2, os_version = lists:concat([Mj,".",Md,".",Mi]),
+		 node_flags = Flags }.
+
+
 update_sort_screen(State, N) ->
     if N >= 1 andalso N =< length(State#state.columns) ->
 	    update_screen(State#state{ sort = N });
@@ -122,16 +130,16 @@ update_screen(State) ->
 
 draw_frame(State) ->
     {_Y, X} = cecho:getmaxyx(),
-    lists:foreach(fun(N) -> cecho:move(N,0),
-			    cecho:hline($ , X) 
-		  end, lists:seq(1, 5)),
-    ok = cecho:attron(?ceA_NORMAL),
-    ok = cecho:mvaddstr(0,0,lists:concat(["ntop - ",State#state.node," (",State#state.otp_rel,"/",State#state.version,")"])),
-    Sorting = ["Update Interval: ", State#state.interval, "ms - Sorting: ", 
-	       element(1,lists:nth(State#state.sort, State#state.columns)), " ",
-	       if State#state.reverse_sort == false -> "(Ascending)"; true -> "(Descending)" end],
-    ok = cecho:mvaddstr(5,0, lists:concat(Sorting)),
-    ok = cecho:attroff(?ceA_NORMAL),
+    lists:foreach(fun(N) -> cecho:move(N,0), cecho:hline($ , X) end, lists:seq(1, 5)),
+    Head = io_lib:format("Node: ~p (~s/~s) ~p (~p ~s) ~s", [State#state.node, State#state.otp_version, 
+							    State#state.erts_version, State#state.os_fam,
+							    State#state.os, State#state.os_version,
+							    State#state.node_flags]),
+    ok = cecho:mvaddstr(0,0,lists:flatten(Head)),
+    ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
+    SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
+    Sorting = io_lib:format("Interval: ~pms, Sorting: ~s (~s)", [State#state.interval, ColName, SortName]),
+    ok = cecho:mvaddstr(5,0, lists:flatten(Sorting)),
     ok = cecho:attron(?ceA_REVERSE),
     {_Y, X} = cecho:getmaxyx(),
     ok = cecho:move(6, 0),

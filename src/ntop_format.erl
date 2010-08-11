@@ -35,18 +35,18 @@
 %% Module API
 %% =============================================================================
 init() ->
-    Columns = [{"Pid", 15, [{align, right}]},
-	       {"Name", 15, []},
-	       {"Reductions", 10, []},
-	       {"Queue", 5, []},
-	       {"HSize", 5, []},
-	       {"SSize", 5, []},
-	       {"HTot", 5, []}],
+    Columns = [{"Pid", 12, [{align, right}]},
+	       {"Name", 20, []},
+	       {"Reductions", 12, []},
+	       {"Queue", 6, []},
+	       {"HSize", 6, []},
+	       {"SSize", 6, []},
+	       {"HTot", 6, []}],
     {ok, Columns, #state{}}.
 
 %% Header Callback
 header(SystemInfo, State) ->
-    Row1 = io_lib:format("Process Count: ~p", [proplists:get_value(process_count, SystemInfo, 0)]),
+    Row1 = io_lib:format("Processes: ~p total", [proplists:get_value(process_count, SystemInfo, 0)]),
     Row2 = io_lib:format("Uptime: ~p", [element(1, proplists:get_value(uptime, SystemInfo, 0))]),
     Row3 = "",
     Row4 = "",
@@ -54,10 +54,10 @@ header(SystemInfo, State) ->
 
 %% Column Specific Callbacks
 row(ProcessInfo, State) ->
-    Pid = erlang:pid_to_list(proplists:get_value(pid, ProcessInfo)),
+    Pid = proplists:get_value(pid, ProcessInfo),
     RegName = case proplists:get_value(registered_name, ProcessInfo) of
 		  undefined ->
-		      "N/A";
+		      "-";
 		  Name ->
 		      atom_to_list(Name)
 	      end,

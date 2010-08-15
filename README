@@ -2,7 +2,10 @@
                    ntop - A top-like Erlang node monitoring tool
 ================================================================================
 
-Ntop is a tool which tries to be as similar to the unix tool 'top' as possible.
+Ntop is a tool which shows information about a remote Erlang node in a way which
+is similar to unix 'top'. It needs (at least) Cecho 0.3.0 
+(http://www.github.com/mazenharake/cecho) to run. See the section "Usage" to see
+what commands that are supported.
 
 == Contact ==
 For feedback, comments and/or suggestions

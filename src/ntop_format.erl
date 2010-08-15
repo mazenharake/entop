@@ -51,7 +51,7 @@ init(Node) ->
 	       {"HSize", 6, []},
 	       {"SSize", 6, []},
 	       {"HTot", 6, []}],
-    {ok, Columns, #state{ node = Node }}.
+    {ok, {Columns, 3}, #state{ node = Node }}.
 
 %% Header Callback
 header(SystemInfo, State) ->

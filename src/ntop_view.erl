@@ -54,8 +54,14 @@ init(Parent, State) ->
     ok = cecho:noecho(),
     ok = cecho:curs_set(?ceCURS_INVISIBLE),
     ok = cecho:keypad(?ceSTDSCR, true),
-    {ok, Columns, CBState} = (State#state.callback):init(State#state.node),
-    NState = State#state{ columns = Columns, cbstate = CBState },
+    case (State#state.callback):init(State#state.node) of
+	{ok, {Columns, DefaultSort}, CBState} when DefaultSort =< length(Columns) 
+						   andalso DefaultSort >= 1 ->
+	    NSort = DefaultSort;
+	{ok, {Columns, _}, CBState} ->
+	    NSort = 1
+    end,
+    NState = State#state{ columns = Columns, cbstate = CBState, sort = NSort },
     print_nodeinfo(State),
     Parent ! continue,
     self() ! time_update,

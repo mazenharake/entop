@@ -22,7 +22,7 @@
 %% ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
 
--module(ntop_format).
+-module(entop_format).
 -include_lib("cecho/include/cecho.hrl").
 
 %% Module API

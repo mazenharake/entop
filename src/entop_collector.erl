@@ -22,7 +22,7 @@
 %% ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
 
--module(ntop_collector).
+-module(entop_collector).
 
 %% Module API
 -export([get_data/0]).

@@ -1,10 +1,10 @@
 #!/bin/bash
 TARGETNODE=
-NAME="-sname ntop"
+NAME="-sname entop"
 COOKIE="-setcookie cookie"
 
 function usage() {
-    echo -e "Usage: ./ntop <TARGETNODE> [-name <NAME>|-sname <SNAME>] [-setcookie <COOKIE>]"
+    echo -e "Usage: ./entop <TARGETNODE> [-name <NAME>|-sname <SNAME>] [-setcookie <COOKIE>]"
 }
 
 if [[ $# -lt 1 ]]; then
@@ -28,7 +28,7 @@ do
     esac
 done
 
-erl -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ +A 20 +Bc -eval "ntop:start('${TARGETNODE}',[])" $NAME $COOKIE $@
+erl -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ +A 20 +Bc -eval "entop:start('${TARGETNODE}',[])" $NAME $COOKIE $@
 
 CODE=$?
 if [[ $CODE -eq 101 ]]; then

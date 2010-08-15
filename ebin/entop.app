@@ -1,6 +1,6 @@
-{application, ntop,
+{application, entop,
  [{description, "A top-like tool for monitoring an erlang node"},
   {vsn, "0.0.1"},
-  {modules, [ntop]},
+  {modules, [entop,  entop_collector, entop_format, entop_view]},
   {applications, []},
   {env, []}]}.

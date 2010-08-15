@@ -22,8 +22,8 @@
 %% ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %% POSSIBILITY OF SUCH DAMAGE.
 
--module(ntop).
--include("ntop.hrl").
+-module(entop).
+-include("entop.hrl").
 -include_lib("cecho/include/cecho.hrl").
 
 %% Application API
@@ -36,7 +36,7 @@ start(Node, Options) ->
     State = (read_options(Options))#state{ node = Node },
     case net_kernel:connect(Node) of
 	true ->
-	    ViewPid = ntop_view:start(State),
+	    ViewPid = entop_view:start(State),
 	    control(ViewPid);
 	false ->
 	    halt(101)

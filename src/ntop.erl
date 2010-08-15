@@ -71,5 +71,7 @@ control(ViewPid) ->
     end.
 
 do_exit(ViewPid) ->
-    exit(ViewPid, normal), application:stop(cecho), halt(0).
+    exit(ViewPid, normal), 
+    application:stop(cecho),
+    halt().
 

@@ -48,14 +48,15 @@ reload(ViewPid) ->
 %% Internal Functions
 %% =============================================================================
 init(Parent, State) ->
+    process_flag(trap_exit, true),
     application:start(cecho),
     ok = cecho:cbreak(),
     ok = cecho:noecho(),
     ok = cecho:curs_set(?ceCURS_INVISIBLE),
     ok = cecho:keypad(?ceSTDSCR, true),
-    {ok, Columns, CBState} = (State#state.callback):init(),    
+    {ok, Columns, CBState} = (State#state.callback):init(State#state.node),
     NState = State#state{ columns = Columns, cbstate = CBState },
-    draw_frame(NState),
+    print_nodeinfo(State),
     Parent ! continue,
     self() ! time_update,
     loop(Parent, NState).
@@ -80,7 +81,9 @@ loop(Parent, State) ->
 	    loop(Parent, State2);
 	reverse_sort ->
 	    State2 = update_screen(State#state{ reverse_sort = (not State#state.reverse_sort) }),
-	    loop(Parent, State2)
+	    loop(Parent, State2);
+	{'EXIT', Parent, _} ->
+	    ok
     end.
 
 load_remote_static_data(State) ->
@@ -113,45 +116,58 @@ update_sort_screen(State, N) ->
     end.
 
 update_screen(State) ->
-    draw_frame(State),
-    {ok, SystemInfo, ProcessInfo} = rpc:call(State#state.node, State#state.remote_module, get_data, []),
+    print_nodeinfo(State),
+    draw_title_bar(State),
+    {Time, {ok, SystemInfo, ProcessInfo}} = 
+	timer:tc(rpc, call, [State#state.node, State#state.remote_module, get_data, []]),
+    print_showinfo(State, Time),
     {Headers, State1} = handle_system_info(SystemInfo, State),
     {ProcList, State2} = handle_process_info(ProcessInfo, State1), 
     SortedProcList = sort(ProcList, State),
     update_headers(Headers, State2),
     {Y, X} = cecho:getmaxyx(),
     StartY = (Y-(Y-7)),
-    lists:foreach(fun(N) -> cecho:move(N,0),
-			    cecho:hline($ , X) 
-		  end, lists:seq(StartY, Y)),
+    lists:foreach(fun(N) -> ok = cecho:move(N, 0),
+			    ok = cecho:hline($ , X) 
+		  end, lists:seq(StartY, Y-7)),
     update_rows(SortedProcList, State2#state.columns, StartY, Y),
-    cecho:refresh(),    
+    ok = cecho:refresh(),
     State2.
 
-draw_frame(State) ->
+print_nodeinfo(State) ->
     {_Y, X} = cecho:getmaxyx(),
-    lists:foreach(fun(N) -> cecho:move(N,0), cecho:hline($ , X) end, lists:seq(1, 5)),
-    Head = io_lib:format("Node: ~p (~s/~s) ~p (~p ~s) ~s", [State#state.node, State#state.otp_version, 
-							    State#state.erts_version, State#state.os_fam,
-							    State#state.os, State#state.os_version,
-							    State#state.node_flags]),
-    ok = cecho:mvaddstr(0,0,lists:flatten(Head)),
-    ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
-    SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
-    Sorting = io_lib:format("Interval: ~pms, Sorting: ~s (~s)", [State#state.interval, ColName, SortName]),
-    ok = cecho:mvaddstr(5,0, lists:flatten(Sorting)),
-    ok = cecho:attron(?ceA_REVERSE),
+    ok = cecho:move(0, 0),
+    ok = cecho:hline($ , X),
+    Head = io_lib:format("Node: ~p (~s/~s) ~p (~p ~s) ~s", 
+			 [State#state.node, State#state.otp_version, 
+			  State#state.erts_version, State#state.os_fam,
+			  State#state.os, State#state.os_version,
+			  State#state.node_flags]),
+    ok = cecho:mvaddstr(0,0,lists:flatten(Head)).
+
+draw_title_bar(State) ->
     {_Y, X} = cecho:getmaxyx(),
     ok = cecho:move(6, 0),
+    ok = cecho:attron(?ceA_REVERSE),
     ok = cecho:hline($ , X),
-    ok = draw_tbar(State#state.columns, 0),
+    ok = draw_title_bar(State#state.columns, 0),
     ok = cecho:attroff(?ceA_REVERSE).
 
-draw_tbar([], _) -> ok;
-draw_tbar([{Title, Width, Options}|Rest], Offset) ->
+draw_title_bar([], _) -> ok;
+draw_title_bar([{Title, Width, Options}|Rest], Offset) ->
     Align = proplists:get_value(align, Options, left),
     ok = cecho:mvaddstr(6, Offset, string:Align(Title, Width)++" "),
-    draw_tbar(Rest, Offset + Width + 1).
+    draw_title_bar(Rest, Offset + Width + 1).
+
+print_showinfo(State, RoundTripTime) ->
+    {_Y, X} = cecho:getmaxyx(),
+    ok = cecho:move(5, 0),
+    ok = cecho:hline($ , X),
+    ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
+    SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
+    Showing = io_lib:format("Showing: Interval ~p ms, Sorting on ~p (~s), Retrieved in ~p ms", 
+			    [State#state.interval, ColName, SortName, RoundTripTime div 1000]),
+    ok = cecho:mvaddstr(5,0, lists:flatten(Showing)).
 
 handle_system_info(SystemInfo, State) ->
     {ok, Headers, NCBState} = (State#state.callback):header(SystemInfo, State#state.cbstate),
@@ -200,7 +216,7 @@ update_row([RowColValue|Rest], [{_,Width,Options}|RestColumns], LineNumber, Offs
 		  _ ->
 		      string:left(StrColVal, Width)
 	      end,
-    cecho:mvaddstr(LineNumber, Offset, Aligned),
+    ok = cecho:mvaddstr(LineNumber, Offset, Aligned),
     update_row(Rest, RestColumns, LineNumber, Offset+Width+1).
     
     

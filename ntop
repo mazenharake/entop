@@ -28,10 +28,13 @@ do
     esac
 done
 
-erl -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ +A 200 +Bc -eval "ntop:start('${TARGETNODE}',[])" $NAME $COOKIE $@
+erl -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ +A 20 +Bc -eval "ntop:start('${TARGETNODE}',[])" $NAME $COOKIE $@
 
 CODE=$?
-if [[ $CODE == 101 ]]; then
-    echo "Unable to connect to '${NODE}', check nodename, cookie and network."
+if [[ $CODE -eq 101 ]]; then
+    echo "Unable to connect to '${TARGETNODE}', check nodename, cookie and network."
     exit 2
+elif [[ $CODE -gt 0 ]]; then
+    echo "Something wrong. Code: ${CODE}"
+    exit $CODE
 fi

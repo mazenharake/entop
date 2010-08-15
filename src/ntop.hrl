@@ -26,4 +26,4 @@
 -record(state, { callback = ntop_format, remote_module =
 		 ntop_collector, columns, cbstate, node, otp_version,
 		 erts_version, os_fam, os, os_version, node_flags,
-		 interval = 1000, reverse_sort = false, sort = 1 }).
+		 interval = 1000, reverse_sort = true, sort = 1 }).

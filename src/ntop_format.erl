@@ -66,7 +66,7 @@ header(SystemInfo, State) ->
     RedTotal = element(2,proplists:get_value(reduction_count, SystemInfo)),
     PMemUsed = proplists:get_value(process_memory_used, SystemInfo),
     PMemTotal = proplists:get_value(process_memory_total, SystemInfo),
-    Row2 = io_lib:format("Processes: total ~p (runqueue ~p) at ~p RpI using ~s (~s allocated)", 
+    Row2 = io_lib:format("Processes: total ~p (RQ ~p) at ~p RpI using ~s (~s allocated)", 
 			 [PTotal, RQueue, RedTotal, mem2str(PMemUsed), mem2str(PMemTotal)]),
 
     MemInfo = proplists:get_value(memory, SystemInfo),

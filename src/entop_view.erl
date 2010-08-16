@@ -29,14 +29,16 @@
 %% Module API
 -export([start/1, reload/1]).
 
+%% Defines
+-define(MAX_HLINE, 300).
+
 %% =============================================================================
 %% Module API
 %% =============================================================================
 start(State) ->
     Parent = self(),
     NState = load_remote_static_data(State),
-    {_, Binary, Filename} = code:get_object_code(NState#state.remote_module),
-    rpc:call(State#state.node, code, load_binary, [NState#state.remote_module, Filename, Binary]),
+    remote_load_code(NState#state.remote_module, State#state.node),
     ViewPid = erlang:spawn(fun() -> init(Parent, NState) end),
     receive continue -> ok end,
     ViewPid.
@@ -47,6 +49,23 @@ reload(ViewPid) ->
 %% =============================================================================
 %% Internal Functions
 %% =============================================================================
+load_remote_static_data(State) ->
+    RPC = fun(M, F, A) -> rpc:call(State#state.node, M, F, A) end,
+    Otp = RPC(erlang, system_info, [otp_release]),
+    Erts = RPC(erlang, system_info, [version]),
+    {Os1, Os2} = RPC(os, type, []),
+    OsVers = RPC(os, version, []),
+    Flags = [{cpus, RPC(erlang, system_info, [logical_processors])},
+	     {smp, RPC(erlang, system_info, [smp_support])},
+	     {a_threads, RPC(erlang, system_info, [thread_pool_size])},
+	     {kpoll, RPC(erlang, system_info, [kernel_poll])}],
+    State#state{ otp_version = Otp, erts_version = Erts,
+		 os_fam = Os1, os = Os2, os_version = OsVers, node_flags = Flags }.
+
+remote_load_code(Module, Node) ->
+    {_, Binary, Filename} = code:get_object_code(Module),
+    rpc:call(Node, code, load_binary, [Module, Filename, Binary]).
+
 init(Parent, State) ->
     process_flag(trap_exit, true),
     application:start(cecho),
@@ -54,6 +73,13 @@ init(Parent, State) ->
     ok = cecho:noecho(),
     ok = cecho:curs_set(?ceCURS_INVISIBLE),
     ok = cecho:keypad(?ceSTDSCR, true),
+    NState = init_callback(State),
+    print_nodeinfo(NState),
+    Parent ! continue,
+    self() ! time_update,
+    loop(Parent, NState).
+
+init_callback(State) ->
     case (State#state.callback):init(State#state.node) of
 	{ok, {Columns, DefaultSort}, CBState} when DefaultSort =< length(Columns) 
 						   andalso DefaultSort >= 1 ->
@@ -61,12 +87,31 @@ init(Parent, State) ->
 	{ok, {Columns, _}, CBState} ->
 	    NSort = 1
     end,
-    NState = State#state{ columns = Columns, cbstate = CBState, sort = NSort },
-    print_nodeinfo(State),
-    Parent ! continue,
-    self() ! time_update,
-    loop(Parent, NState).
-    
+    State#state{ columns = Columns, cbstate = CBState, sort = NSort }.
+
+print_nodeinfo(State) ->
+    cecho:move(0, 0),
+    cecho:hline($ , ?MAX_HLINE),
+    {Mj, Md, Mi} = State#state.os_version,
+    OsVers = lists:concat([Mj,".",Md,".",Mi]),
+    Head = io_lib:format("Node: ~p (~s/~s) ~p (~p ~s)~s", 
+			 [State#state.node, State#state.otp_version, 
+			  State#state.erts_version, State#state.os_fam,
+			  State#state.os, OsVers, flags2str(State#state.node_flags)]),
+    ok = cecho:mvaddstr(0,0,lists:flatten(Head)).
+
+flags2str([]) -> [];
+flags2str([{cpus, N}|Rest]) -> 
+    [" CPU:"++integer_to_list(N)|flags2str(Rest)];
+flags2str([{smp, true}|Rest]) ->
+    [" SMP"|flags2str(Rest)];
+flags2str([{a_threads, N}|Rest]) ->
+    [" +A:"++integer_to_list(N)|flags2str(Rest)];
+flags2str([{kpoll, true}|Rest]) ->
+    [" +K"|flags2str(Rest)];
+flags2str([_|Rest]) ->
+    flags2str(Rest).
+
 loop(Parent, State) ->
     receive
 	time_update ->
@@ -92,20 +137,6 @@ loop(Parent, State) ->
 	    ok
     end.
 
-load_remote_static_data(State) ->
-    RPC = fun(M, F, A) -> rpc:call(State#state.node, M, F, A) end,
-    Otp = RPC(erlang, system_info, [otp_release]),
-    Erts = RPC(erlang, system_info, [version]),
-    {Os1, Os2} = RPC(os, type, []),
-    OsVers = RPC(os, version, []),
-    Flags = [{cpus, RPC(erlang, system_info, [logical_processors])},
-	     {smp, RPC(erlang, system_info, [smp_support])},
-	     {a_threads, RPC(erlang, system_info, [thread_pool_size])},
-	     {kpoll, RPC(erlang, system_info, [kernel_poll])}],
-    State#state{ otp_version = Otp, erts_version = Erts,
-		 os_fam = Os1, os = Os2, os_version = OsVers, node_flags = Flags }.
-
-
 update_sort_screen(State, N) ->
     if N >= 1 andalso N =< length(State#state.columns) ->
 	    update_screen(State#state{ sort = N });
@@ -115,69 +146,40 @@ update_sort_screen(State, N) ->
 update_screen(State) ->
     print_nodeinfo(State),
     draw_title_bar(State),
-    {Time, {ok, SystemInfo, ProcessInfo}} = 
-	timer:tc(rpc, call, [State#state.node, State#state.remote_module, get_data, []]),
+    {Time, {ok, SysInfo, PInfo}} = timer:tc(rpc, call, [State#state.node, State#state.remote_module, get_data, []]),
     print_showinfo(State, Time),
-    {Headers, State1} = handle_system_info(SystemInfo, State),
-    {ProcList, State2} = handle_process_info(ProcessInfo, State1), 
+    {Headers, State1} = handle_system_info(SysInfo, State),
+    lists:foldl(fun(Header, Y) -> cecho:mvaddstr(Y, 0, Header), Y + 1 end, 1, Headers),
+    {ProcList, State2} = handle_process_info(PInfo, State1), 
     SortedProcList = sort(ProcList, State),
-    update_headers(Headers, State2),
-    {Y, X} = cecho:getmaxyx(),
+    {Y, _} = cecho:getmaxyx(),
     StartY = (Y-(Y-7)),
-    lists:foreach(fun(N) -> ok = cecho:move(N, 0),
-			    ok = cecho:hline($ , X) 
-		  end, lists:seq(StartY, Y-7)),
+    lists:foreach(fun(N) -> cecho:move(N, 0), cecho:hline($ , ?MAX_HLINE) end, lists:seq(StartY, Y)),
     update_rows(SortedProcList, State2#state.columns, StartY, Y),
-    ok = cecho:refresh(),
+    cecho:refresh(),
     State2.
 
-print_nodeinfo(State) ->
-    {_Y, X} = cecho:getmaxyx(),
-    ok = cecho:move(0, 0),
-    ok = cecho:hline($ , X),
-    {Mj, Md, Mi} = State#state.os_version,
-    OsVers = lists:concat([Mj,".",Md,".",Mi]),
-    Head = io_lib:format("Node: ~p (~s/~s) ~p (~p ~s)~s", 
-			 [State#state.node, State#state.otp_version, 
-			  State#state.erts_version, State#state.os_fam,
-			  State#state.os, OsVers, flags2str(State#state.node_flags)]),
-    ok = cecho:mvaddstr(0,0,lists:flatten(Head)).
-
-flags2str([]) -> [];
-flags2str([{cpus, N}|Rest]) -> 
-    [" CPU:"++integer_to_list(N)|flags2str(Rest)];
-flags2str([{smp, true}|Rest]) ->
-    [" SMP"|flags2str(Rest)];
-flags2str([{a_threads, N}|Rest]) ->
-    [" +A:"++integer_to_list(N)|flags2str(Rest)];
-flags2str([{kpoll, true}|Rest]) ->
-    [" +K"|flags2str(Rest)];
-flags2str([_|Rest]) ->
-    flags2str(Rest).
-
 draw_title_bar(State) ->
-    {_Y, X} = cecho:getmaxyx(),
-    ok = cecho:move(6, 0),
-    ok = cecho:attron(?ceA_REVERSE),
-    ok = cecho:hline($ , X),
-    ok = draw_title_bar(State#state.columns, 0),
-    ok = cecho:attroff(?ceA_REVERSE).
+    cecho:move(6, 0),
+    cecho:attron(?ceA_REVERSE),
+    cecho:hline($ , ?MAX_HLINE),
+    draw_title_bar(State#state.columns, 0),
+    cecho:attroff(?ceA_REVERSE).
 
 draw_title_bar([], _) -> ok;
 draw_title_bar([{Title, Width, Options}|Rest], Offset) ->
     Align = proplists:get_value(align, Options, left),
-    ok = cecho:mvaddstr(6, Offset, string:Align(Title, Width)++" "),
+    cecho:mvaddstr(6, Offset, string:Align(Title, Width)++" "),
     draw_title_bar(Rest, Offset + Width + 1).
 
 print_showinfo(State, RoundTripTime) ->
-    {_Y, X} = cecho:getmaxyx(),
-    ok = cecho:move(5, 0),
-    ok = cecho:hline($ , X),
+    cecho:move(5, 0),
+    cecho:hline($ , ?MAX_HLINE),
     ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
     SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
     Showing = io_lib:format("Showing: Interval ~p ms, Sorting on ~p (~s), Retrieved in ~p ms", 
 			    [State#state.interval, ColName, SortName, RoundTripTime div 1000]),
-    ok = cecho:mvaddstr(5,0, lists:flatten(Showing)).
+    cecho:mvaddstr(5,0, lists:flatten(Showing)).
 
 handle_system_info(SystemInfo, State) ->
     {ok, Headers, NCBState} = (State#state.callback):header(SystemInfo, State#state.cbstate),
@@ -192,12 +194,6 @@ hpi([ProcessInfo|Rest], State, Acc) ->
     {ok, Row, NCBState} =
 	(State#state.callback):row(ProcessInfo, State#state.cbstate),
     hpi(Rest, State#state{ cbstate = NCBState }, [Row|Acc]).
-
-update_headers(Headers, _State) ->
-    lists:foldl(fun(RX, LineNumber) ->
-			cecho:mvaddstr(LineNumber,0,RX),
-			LineNumber + 1
-		end, 1, Headers).
 
 sort(ProcList, State) ->
     Sorted = lists:keysort(State#state.sort, ProcList),
@@ -226,7 +222,7 @@ update_row([RowColValue|Rest], [{_,Width,Options}|RestColumns], LineNumber, Offs
 		  _ ->
 		      string:left(StrColVal, Width)
 	      end,
-    ok = cecho:mvaddstr(LineNumber, Offset, Aligned),
+    cecho:mvaddstr(LineNumber, Offset, Aligned),
     update_row(Rest, RestColumns, LineNumber, Offset+Width+1).
     
     

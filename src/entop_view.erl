@@ -97,22 +97,13 @@ load_remote_static_data(State) ->
     Otp = RPC(erlang, system_info, [otp_release]),
     Erts = RPC(erlang, system_info, [version]),
     {Os1, Os2} = RPC(os, type, []),
-    {Mj, Md, Mi} = RPC(os, version, []),
-    Cpus = "CPU:"++integer_to_list(RPC(erlang, system_info, [logical_processors])),
-    SMP = case RPC(erlang, system_info, [smp_support]) of
-	      false -> "";
-	      true -> " SMP"
-	  end,
-    A = " +A:"++integer_to_list(RPC(erlang, system_info, [thread_pool_size])) ,
-    K = case RPC(erlang, system_info, [kernel_poll]) of
-	    false -> "";
-	    true -> " +K"
-	end,
-    Flags = lists:concat([Cpus,SMP,A,K]),
-    State#state{ otp_version = Otp,
-		 erts_version = Erts,
-		 os_fam = Os1, os = Os2, os_version = lists:concat([Mj,".",Md,".",Mi]),
-		 node_flags = Flags }.
+    OsVers = RPC(os, version, []),
+    Flags = [{cpus, RPC(erlang, system_info, [logical_processors])},
+	     {smp, RPC(erlang, system_info, [smp_support])},
+	     {a_threads, RPC(erlang, system_info, [thread_pool_size])},
+	     {kpoll, RPC(erlang, system_info, [kernel_poll])}],
+    State#state{ otp_version = Otp, erts_version = Erts,
+		 os_fam = Os1, os = Os2, os_version = OsVers, node_flags = Flags }.
 
 
 update_sort_screen(State, N) ->
@@ -144,12 +135,25 @@ print_nodeinfo(State) ->
     {_Y, X} = cecho:getmaxyx(),
     ok = cecho:move(0, 0),
     ok = cecho:hline($ , X),
-    Head = io_lib:format("Node: ~p (~s/~s) ~p (~p ~s) ~s", 
+    {Mj, Md, Mi} = State#state.os_version,
+    OsVers = lists:concat([Mj,".",Md,".",Mi]),
+    Head = io_lib:format("Node: ~p (~s/~s) ~p (~p ~s)~s", 
 			 [State#state.node, State#state.otp_version, 
 			  State#state.erts_version, State#state.os_fam,
-			  State#state.os, State#state.os_version,
-			  State#state.node_flags]),
+			  State#state.os, OsVers, flags2str(State#state.node_flags)]),
     ok = cecho:mvaddstr(0,0,lists:flatten(Head)).
+
+flags2str([]) -> [];
+flags2str([{cpus, N}|Rest]) -> 
+    [" CPU:"++integer_to_list(N)|flags2str(Rest)];
+flags2str([{smp, true}|Rest]) ->
+    [" SMP"|flags2str(Rest)];
+flags2str([{a_threads, N}|Rest]) ->
+    [" +A:"++integer_to_list(N)|flags2str(Rest)];
+flags2str([{kpoll, true}|Rest]) ->
+    [" +K"|flags2str(Rest)];
+flags2str([_|Rest]) ->
+    flags2str(Rest).
 
 draw_title_bar(State) ->
     {_Y, X} = cecho:getmaxyx(),

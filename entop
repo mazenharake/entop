@@ -28,7 +28,7 @@ do
     esac
 done
 
-erl -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ +A 20 +Bc -eval "entop:start('${TARGETNODE}',[])" $NAME $COOKIE $@
+erl -noinput -hidden -pa ebin/ -pa ../cecho/ebin/ +A 20 +Bc -eval "entop:start('${TARGETNODE}')" $NAME $COOKIE $@
 
 CODE=$?
 if [[ $CODE -eq 101 ]]; then

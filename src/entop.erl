@@ -27,13 +27,13 @@
 -include_lib("cecho/include/cecho.hrl").
 
 %% Application API
--export([start/2]).
+-export([start/1]).
 
 %% =============================================================================
 %% Application API
 %% =============================================================================
-start(Node, Options) ->
-    State = (read_options(Options))#state{ node = Node },
+start(Node) ->
+    State = #state{ node = Node },
     case net_kernel:connect(Node) of
 	true ->
 	    ViewPid = entop_view:start(State),
@@ -41,22 +41,6 @@ start(Node, Options) ->
 	false ->
 	    halt(101)
     end.
-
-read_options(Options) ->
-    read_options(Options, #state{}).
-
-read_options([], State) ->
-    State;
-read_options([{interval, Intv} | Rest], State) when is_integer(Intv) andalso Intv > 500 andalso
-						    (Intv rem 500) == 0 ->
-    read_options(Rest, State#state{ interval = Intv });
-read_options([{interval, Intv}|_], _) ->
-    erlang:error({badarg, {invalid_interval, Intv}});
-read_options([{sort, Way} | Rest], State) when Way == reductions orelse Way == memory orelse %
-					       Way == foo orelse Way == bar ->
-    read_options(Rest, State#state{ sort = Way });
-read_options([Option|_],_) ->
-    erlang:error({badarg, {invalid_option, Option}}).
 
 control(ViewPid) ->
     P = cecho:getch(),

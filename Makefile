@@ -1,14 +1,10 @@
-.PHONY: all clean
+all:
+	@./rebar compile
 
-BEAMS       := $(patsubst src/%, ebin/%, $(patsubst %.erl, %.beam, $(wildcard src/*.erl)))
-ECINCLUDES  := -I include
-ECFLAGS     := -pa ../cecho/ebin/ +debug_info
-
-all: $(BEAMS)
-
-ebin/%.beam: src/%.erl
-	@echo "[ERLC]" $<": "$@
-	@erlc -o ebin/ $(ECINCLUDES) $(ECFLAGS) $<
+test: force
+	@./rebar eunit
 
 clean:
-	rm -f ebin/*.beam
+	@./rebar clean
+
+force: ;

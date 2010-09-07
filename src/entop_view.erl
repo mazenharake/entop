@@ -185,9 +185,12 @@ handle_process_info(ProcessInfoList, State) ->
 hpi([], State, Acc) ->
     {Acc, State};
 hpi([ProcessInfo|Rest], State, Acc) ->
-    {ok, Row, NCBState} =
-	(State#state.callback):row(ProcessInfo, State#state.cbstate),
-    hpi(Rest, State#state{ cbstate = NCBState }, [Row|Acc]).
+    case (State#state.callback):row(ProcessInfo, State#state.cbstate) of
+	{ok, skip, NCBState} ->
+	    hpi(Rest, State#state{ cbstate = NCBState }, Acc); 
+	{ok, Row, NCBState} ->
+	    hpi(Rest, State#state{ cbstate = NCBState }, [Row|Acc])
+    end.
 
 sort(ProcList, State) ->
     Sorted = lists:keysort(State#state.sort, ProcList),

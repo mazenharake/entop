@@ -76,6 +76,8 @@ header(SystemInfo, State) ->
     {ok, [ lists:flatten(Row) || Row <- [Row1, Row2, Row3, Row4] ], State}.
 
 %% Column Specific Callbacks
+row([{pid,_}|undefined], State) -> 
+    {ok, skip, State};
 row(ProcessInfo, State) ->
     Pid = proplists:get_value(pid, ProcessInfo),
     RegName = case proplists:get_value(registered_name, ProcessInfo) of

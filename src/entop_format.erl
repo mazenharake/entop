@@ -52,7 +52,7 @@ header(SystemInfo, State) ->
     Uptime = millis2uptimestr(element(1, proplists:get_value(uptime, SystemInfo, 0))),
     LocalTime = local2str(element(2, proplists:get_value(local_time, SystemInfo))),
     PingTime = element(1,timer:tc(net_adm, ping, [State#state.node])) div 1000,
-    Row1 = io_lib:format("Time: local time ~s, up for ~s, ~p ms latency, ", 
+    Row1 = io_lib:format("Time: local time ~s, up for ~s, ~pms latency, ", 
 			 [LocalTime, Uptime, PingTime]),
 
     PTotal = proplists:get_value(process_count, SystemInfo),

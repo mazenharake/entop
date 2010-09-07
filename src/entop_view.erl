@@ -172,7 +172,7 @@ print_showinfo(State, RoundTripTime) ->
     cecho:hline($ , ?MAX_HLINE),
     ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
     SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
-    Showing = io_lib:format("Interval ~pms, Sorting on ~p (~s), Retrieved in ~p ms", 
+    Showing = io_lib:format("Interval ~pms, Sorting on ~p (~s), Retrieved in ~pms", 
 			    [State#state.interval, ColName, SortName, RoundTripTime div 1000]),
     cecho:mvaddstr(5,0, lists:flatten(Showing)).
 

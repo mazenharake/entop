@@ -106,15 +106,21 @@ flags2str([{kpoll, true}|Rest]) ->
 flags2str([_|Rest]) ->
     flags2str(Rest).
 
+loop(Parent, #state{ connected = false } = State) ->
+    receive
+	{nodeup, Node} when Node == State#state.node ->
+	    remote_load_code(State#state.remote_module, State#state.node),
+	    loop(Parent, fetch_and_update(State#state{ connected = true }, false));
+	_ ->
+	    loop(Parent, State)
+    end;
 loop(Parent, State) ->
     receive
 	time_update ->
-	    State2 = update_screen(State),
-	    erlang:send_after(State2#state.interval, self(), time_update),
-	    loop(Parent, State2);
+
+	    loop(Parent, fetch_and_update(State, false));
 	force_update ->
-	    State2 = update_screen(State),
-	    loop(Parent, State2);
+	    loop(Parent, fetch_and_update(State, true));
 	{sort, N} when is_integer(N) ->
 	    State2 = update_sort_screen(State, N),
 	    loop(Parent, State2);
@@ -125,23 +131,34 @@ loop(Parent, State) ->
 	    end,
 	    loop(Parent, State2);
 	reverse_sort ->
-	    State2 = update_screen(State#state{ reverse_sort = (not State#state.reverse_sort) }),
+	    State2 = fetch_and_update(State#state{ reverse_sort = (not State#state.reverse_sort) }, true),
 	    loop(Parent, State2);
 	{'EXIT', Parent, _} ->
 	    ok
     end.
 
+fetch_and_update(State, IsForced) ->
+    case entop_net:fetch_data(State#state.node, State#state.remote_module) of
+	{_Time, {badrpc, nodedown}} ->
+	    erlang:spawn_link(entop_net, reconnect, [self(), State#state.node]),
+	    State#state{ connected = false };
+	{Time, {ok, HeaderData, RowDataList}} ->
+	    State2 = update_screen(Time, HeaderData, RowDataList, State),
+	    if not IsForced -> erlang:send_after(State2#state.interval, self(), time_update);
+	       true -> ok
+	    end,
+	    State2
+    end.
+
 update_sort_screen(State, N) ->
     if N >= 1 andalso N =< length(State#state.columns) ->
-	    update_screen(State#state{ sort = N });
+	    fetch_and_update(State#state{ sort = N }, true);
        true -> State
     end.
 
-update_screen(State) ->
+update_screen(Time, HeaderData, RowDataList, State) ->
     print_nodeinfo(State),
     draw_title_bar(State),
-    {Time, {ok, HeaderData, RowDataList}} = 
-	timer:tc(rpc, call, [State#state.node, State#state.remote_module, get_data, []]),
     print_showinfo(State, Time),
     {Headers, State1} = process_header_data(HeaderData, State),
     lists:foldl(fun(Header, Y) -> cecho:mvaddstr(Y, 0, Header), Y + 1 end, 1, Headers),

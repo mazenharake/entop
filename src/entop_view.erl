@@ -88,11 +88,16 @@ print_nodeinfo(State) ->
     cecho:hline($ , ?MAX_HLINE),
     {Mj, Md, Mi} = State#state.os_version,
     OsVers = lists:concat([Mj,".",Md,".",Mi]),
-    Head = io_lib:format("Node: ~p (~s/~s) ~p (~p ~s)~s", 
-			 [State#state.node, State#state.otp_version, 
+    cecho:mvaddstr(0, 0, io_lib:format("Node: ~p ",[State#state.node])),
+    case State#state.connected of
+	false -> cecho:addstr("(Disconnected)");
+	true -> cecho:addstr("(Connected)")
+    end,
+    Head = io_lib:format(" (~s/~s) ~p (~p ~s)~s", 
+			 [State#state.otp_version, 
 			  State#state.erts_version, State#state.os_fam,
 			  State#state.os, OsVers, flags2str(State#state.node_flags)]),
-    ok = cecho:mvaddstr(0,0,lists:flatten(Head)).
+    ok = cecho:addstr(lists:flatten(Head)).
 
 flags2str([]) -> [];
 flags2str([{cpus, N}|Rest]) -> 
@@ -117,7 +122,6 @@ loop(Parent, #state{ connected = false } = State) ->
 loop(Parent, State) ->
     receive
 	time_update ->
-
 	    loop(Parent, fetch_and_update(State, false));
 	force_update ->
 	    loop(Parent, fetch_and_update(State, true));
@@ -140,8 +144,11 @@ loop(Parent, State) ->
 fetch_and_update(State, IsForced) ->
     case entop_net:fetch_data(State#state.node, State#state.remote_module) of
 	{_Time, {badrpc, nodedown}} ->
+	    NState = State#state{ connected = false },
+	    print_nodeinfo(NState),
+	    cecho:refresh(),
 	    erlang:spawn_link(entop_net, reconnect, [self(), State#state.node]),
-	    State#state{ connected = false };
+	    NState;
 	{Time, {ok, HeaderData, RowDataList}} ->
 	    State2 = update_screen(Time, HeaderData, RowDataList, State),
 	    if not IsForced -> erlang:send_after(State2#state.interval, self(), time_update);

@@ -140,16 +140,17 @@ update_sort_screen(State, N) ->
 update_screen(State) ->
     print_nodeinfo(State),
     draw_title_bar(State),
-    {Time, {ok, SysInfo, PInfo}} = timer:tc(rpc, call, [State#state.node, State#state.remote_module, get_data, []]),
+    {Time, {ok, HeaderData, RowDataList}} = 
+	timer:tc(rpc, call, [State#state.node, State#state.remote_module, get_data, []]),
     print_showinfo(State, Time),
-    {Headers, State1} = handle_system_info(SysInfo, State),
+    {Headers, State1} = process_header_data(HeaderData, State),
     lists:foldl(fun(Header, Y) -> cecho:mvaddstr(Y, 0, Header), Y + 1 end, 1, Headers),
-    {ProcList, State2} = handle_process_info(PInfo, State1), 
-    SortedProcList = sort(ProcList, State),
+    {RowList, State2} = process_row_data(RowDataList, State1), 
+    SortedRowList = sort(RowList, State),
     {Y, _} = cecho:getmaxyx(),
     StartY = (Y-(Y-7)),
     lists:foreach(fun(N) -> cecho:move(N, 0), cecho:hline($ , ?MAX_HLINE) end, lists:seq(StartY, Y)),
-    update_rows(SortedProcList, State2#state.columns, StartY, Y),
+    update_rows(SortedRowList, State2#state.columns, StartY, Y),
     cecho:refresh(),
     State2.
 
@@ -171,25 +172,25 @@ print_showinfo(State, RoundTripTime) ->
     cecho:hline($ , ?MAX_HLINE),
     ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
     SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
-    Showing = io_lib:format("Showing: Interval ~p ms, Sorting on ~p (~s), Retrieved in ~p ms", 
+    Showing = io_lib:format("Interval ~pms, Sorting on ~p (~s), Retrieved in ~p ms", 
 			    [State#state.interval, ColName, SortName, RoundTripTime div 1000]),
     cecho:mvaddstr(5,0, lists:flatten(Showing)).
 
-handle_system_info(SystemInfo, State) ->
-    {ok, Headers, NCBState} = (State#state.callback):header(SystemInfo, State#state.cbstate),
+process_header_data(HeaderData, State) ->
+    {ok, Headers, NCBState} = (State#state.callback):header(HeaderData, State#state.cbstate),
     {Headers, State#state{ cbstate = NCBState }}.
 
-handle_process_info(ProcessInfoList, State) ->
-    hpi(ProcessInfoList, State, []).
+process_row_data(RowDataList, State) ->
+    prd(RowDataList, State, []).
 
-hpi([], State, Acc) ->
+prd([], State, Acc) ->
     {Acc, State};
-hpi([ProcessInfo|Rest], State, Acc) ->
-    case (State#state.callback):row(ProcessInfo, State#state.cbstate) of
+prd([RowData|Rest], State, Acc) ->
+    case (State#state.callback):row(RowData, State#state.cbstate) of
 	{ok, skip, NCBState} ->
-	    hpi(Rest, State#state{ cbstate = NCBState }, Acc); 
+	    prd(Rest, State#state{ cbstate = NCBState }, Acc); 
 	{ok, Row, NCBState} ->
-	    hpi(Rest, State#state{ cbstate = NCBState }, [Row|Acc])
+	    prd(Rest, State#state{ cbstate = NCBState }, [Row|Acc])
     end.
 
 sort(ProcList, State) ->

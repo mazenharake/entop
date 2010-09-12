@@ -71,7 +71,7 @@ header(SystemInfo, State) ->
     CodeMem = mem2str(proplists:get_value(code, MemInfo)),
     EtsMem = mem2str(proplists:get_value(ets, MemInfo)),
     Row3 = io_lib:format("Memory: Sys ~s, Atom ~s/~s, Bin ~s, Code ~s, Ets ~s",
-			 [SystemMem, AtomMem, AtomUsedMem, BinMem, CodeMem, EtsMem]),
+			 [SystemMem, AtomUsedMem, AtomMem, BinMem, CodeMem, EtsMem]),
     Row4 = "",
     {ok, [ lists:flatten(Row) || Row <- [Row1, Row2, Row3, Row4] ], State}.
 

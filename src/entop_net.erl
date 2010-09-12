@@ -13,8 +13,27 @@
 %% See the License for the specific language governing permissions and
 %% limitations under the License.
 %%==============================================================================
-%% Records 
--record(state, { callback = entop_format, remote_module = entop_collector,
-		 columns, cbstate, node, otp_version, erts_version, os_fam, os,
-		 os_version, node_flags, interval = 1000, reverse_sort = true,
-		 sort = 1, connected = false }).
+-module(entop_net).
+
+-author('mazen.harake@erlang-solutions.com').
+
+-include("entop.hrl").
+
+%% Module API
+-export([fetch_data/2, reconnect/2]).
+
+%% =============================================================================
+%% Module API
+%% =============================================================================
+fetch_data(Node, Module) ->
+    timer:tc(rpc, call, [Node, Module, get_data, []]).
+
+reconnect(Parent, Node) ->
+    case net_kernel:connect(Node) of
+	true ->
+	    Parent ! {nodeup, Node};
+	false ->
+	    timer:sleep(1000),
+	    reconnect(Parent, Node)
+    end.
+	

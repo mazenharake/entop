@@ -30,7 +30,7 @@ start(Node) ->
     State = #state{ node = Node },
     case net_kernel:connect(Node) of
 	true ->
-	    ViewPid = entop_view:start(State),
+	    ViewPid = entop_view:start(State#state{ connected = true }),
 	    control(ViewPid);
 	false ->
 	    halt(101)

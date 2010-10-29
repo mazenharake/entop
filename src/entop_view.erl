@@ -168,7 +168,10 @@ update_screen(Time, HeaderData, RowDataList, State) ->
     draw_title_bar(State),
     print_showinfo(State, Time),
     {Headers, State1} = process_header_data(HeaderData, State),
-    lists:foldl(fun(Header, Y) -> cecho:mvaddstr(Y, 0, Header), Y + 1 end, 1, Headers),
+    lists:foldl(fun(Header, Y) -> 
+			cecho:hline($ , ?MAX_HLINE),
+			cecho:mvaddstr(Y, 0, Header), Y + 1
+		end, 1, Headers),
     {RowList, State2} = process_row_data(RowDataList, State1), 
     SortedRowList = sort(RowList, State),
     {Y, _} = cecho:getmaxyx(),

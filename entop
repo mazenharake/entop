@@ -46,7 +46,9 @@ do
     esac
 done
 
-erl -noinput -hidden -pa ebin -pa deps/cecho/ebin +A 20 +Bc -eval "entop:start('${TARGETNODE}')" $NAME $COOKIE $@
+DIRNAME=`(readlink -n $0 || echo $0) | xargs dirname`
+
+erl -noinput -hidden -pa $DIRNAME/ebin -pa $DIRNAME/deps/cecho/ebin +A 20 +Bc -eval "entop:start('${TARGETNODE}')" $NAME $COOKIE $@
 
 CODE=$?
 if [[ $CODE -eq 101 ]]; then

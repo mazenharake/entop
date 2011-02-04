@@ -95,7 +95,8 @@ row(ProcessInfo, State) ->
 
 mem2str(Mem) ->
     if Mem > ?GIB -> io_lib:format("~.1fm",[Mem/?MIB]);
-       Mem > ?KIB -> io_lib:format("~.1fk",[Mem/?KIB])
+       Mem > ?KIB -> io_lib:format("~.1fk",[Mem/?KIB]);
+       Mem >= 0 -> io_lib:format("~.1fb",[Mem/1.0])
     end.
 
 millis2uptimestr(Millis) ->    

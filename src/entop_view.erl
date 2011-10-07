@@ -149,6 +149,9 @@ fetch_and_update(State, IsForced) ->
 	    cecho:refresh(),
 	    erlang:spawn_link(entop_net, reconnect, [self(), State#state.node]),
 	    NState;
+	{_Time, {badrpc, {'EXIT', {undef, _}}}}->
+            remote_load_code(State#state.remote_module, State#state.node),
+            fetch_and_update(State, IsForced);
 	{Time, {ok, HeaderData, RowDataList}} ->
 	    State2 = update_screen(Time, HeaderData, RowDataList, State),
 	    if not IsForced -> erlang:send_after(State2#state.interval, self(), time_update);

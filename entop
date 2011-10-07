@@ -19,7 +19,7 @@
 #!/bin/bash
 TARGETNODE=
 NAME="-sname entop"
-COOKIE="-setcookie cookie"
+COOKIE=
 
 function usage() {
     echo -e "Usage: ./entop <TARGETNODE> [-name <NAME>|-sname <SNAME>] [-setcookie <COOKIE>]"

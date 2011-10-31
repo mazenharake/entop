@@ -52,7 +52,7 @@ header(SystemInfo, State) ->
     Uptime = millis2uptimestr(element(1, proplists:get_value(uptime, SystemInfo, 0))),
     LocalTime = local2str(element(2, proplists:get_value(local_time, SystemInfo))),
     PingTime = element(1,timer:tc(net_adm, ping, [State#state.node])) div 1000,
-    Row1 = io_lib:format("Time: local time ~s, up for ~s, ~pms latency, ", 
+    Row1 = io_lib:format("Time: local time ~s, up for ~s, ~pms latency, ",
 			 [LocalTime, Uptime, PingTime]),
 
     PTotal = proplists:get_value(process_count, SystemInfo),
@@ -60,7 +60,7 @@ header(SystemInfo, State) ->
     RedTotal = element(2,proplists:get_value(reduction_count, SystemInfo)),
     PMemUsed = proplists:get_value(process_memory_used, SystemInfo),
     PMemTotal = proplists:get_value(process_memory_total, SystemInfo),
-    Row2 = io_lib:format("Processes: total ~p (RQ ~p) at ~p RpI using ~s (~s allocated)", 
+    Row2 = io_lib:format("Processes: total ~p (RQ ~p) at ~p RpI using ~s (~s allocated)",
 			 [PTotal, RQueue, RedTotal, mem2str(PMemUsed), mem2str(PMemTotal)]),
 
     MemInfo = proplists:get_value(memory, SystemInfo),
@@ -76,12 +76,12 @@ header(SystemInfo, State) ->
     {ok, [ lists:flatten(Row) || Row <- [Row1, Row2, Row3, Row4] ], State}.
 
 %% Column Specific Callbacks
-row([{pid,_}|undefined], State) -> 
+row([{pid,_}|undefined], State) ->
     {ok, skip, State};
 row(ProcessInfo, State) ->
     Pid = proplists:get_value(pid, ProcessInfo),
     RegName = case proplists:get_value(registered_name, ProcessInfo) of
-		  undefined ->
+		  [] ->
 		      "-";
 		  Name ->
 		      atom_to_list(Name)
@@ -90,7 +90,7 @@ row(ProcessInfo, State) ->
     Queue = proplists:get_value(message_queue_len, ProcessInfo, 0),
     Heap = proplists:get_value(heap_size, ProcessInfo, 0),
     Stack = proplists:get_value(stack_size, ProcessInfo, 0),
-    HeapTot = proplists:get_value(total_heap_size, ProcessInfo, 0),    
+    HeapTot = proplists:get_value(total_heap_size, ProcessInfo, 0),
     {ok, {Pid, RegName, Reductions, Queue, Heap, Stack, HeapTot}, State}.
 
 mem2str(Mem) ->
@@ -99,7 +99,7 @@ mem2str(Mem) ->
        Mem >= 0 -> io_lib:format("~.1fb",[Mem/1.0])
     end.
 
-millis2uptimestr(Millis) ->    
+millis2uptimestr(Millis) ->
     SecTime = Millis div 1000,
     Days = ?R(SecTime div ?SECONDS_PER_DAY,3),
     Hours = ?R((SecTime rem ?SECONDS_PER_DAY) div ?SECONDS_PER_HOUR,2),

@@ -34,8 +34,18 @@ get_data() ->
 		      {memory, erlang:memory([system, atom, atom_used, binary, code, ets])}
 		     ],
     Self = self(),
-    ProcessesProplist =  [ [ {pid,erlang:pid_to_list(P)} | erlang:process_info(P) ] || 
-			     P <- erlang:processes(), P /= Self ],    
-    
+    ProcessesProplist =  [ [ {pid,erlang:pid_to_list(P)} | process_info_items(P) ] ||
+			     P <- erlang:processes(), P /= Self ],
+
     {ok, HeaderProplist, ProcessesProplist}.
 
+%% =============================================================================
+%% Internal Functions
+%% =============================================================================
+process_info_items(P) ->
+    erlang:process_info(P, [registered_name,
+                            reductions,
+                            message_queue_len,
+                            heap_size,
+                            stack_size,
+                            total_heap_size]).

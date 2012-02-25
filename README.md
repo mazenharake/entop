@@ -1,8 +1,20 @@
 # entop
 A top-like Erlang node monitoring tool
 
+
 ## Introduction
-Entop is a tool which shows information about a remote Erlang node in a way which is similar to unix 'top'. It needs cecho verion 0.3.0 or higher (http://www.github.com/mazenharake/cecho) to run.
+Entop is a tool which shows information about a remote Erlang node in a way which is similar to unix 'top'. 
+
+For entop to run it needs `cecho 0.3.0` or higher for pre-R15 or `cecho 0.4.0` or higher for R15 and above
+(http://www.github.com/mazenharake/cecho).
+
+## Compile
+To clean/compile run
+
+    ./rebar clean
+    ./rebar compile
+
+NOTE: If you have problems with dependencies to `cecho` then create a symlink to cecho in `deps/` (if you already have cecho somewhere) or run `./rebar get-deps` to download the latest version. Don't forget to recompile if you get the dependencies through rebar.
 
 ## Usage
 To run entop make sure you have Erlang installed and that the cecho library (http://www.github.com/mazenharake/cecho) is available in your Erlang code path. The start script assumes that you run it inside the entop application root directory, if you don't want that then change the paths in the scripts accordingly or just make sure you have the ebin/ directory for entop in your Erlang code path. Look at the start script for more details.

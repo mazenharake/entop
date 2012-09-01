@@ -31,7 +31,8 @@ get_data() ->
 		      {reduction_count, erlang:statistics(reductions)},
 		      {process_memory_used, erlang:memory(processes_used)},
 		      {process_memory_total, erlang:memory(processes)},
-		      {memory, erlang:memory([system, atom, atom_used, binary, code, ets])}
+		      {memory, erlang:memory([system, atom, atom_used, binary, code, ets])},
+		      {cpu, [{avg1, cpu_sup:avg1() / 256}, {avg5, cpu_sup:avg5() / 256}, {avg15, cpu_sup:avg15() / 256}]}
 		     ],
     Self = self(),
     ProcessesProplist =  [ [ {pid,erlang:pid_to_list(P)} | process_info_items(P) ] ||
@@ -48,4 +49,8 @@ process_info_items(P) ->
                             message_queue_len,
                             heap_size,
                             stack_size,
-                            total_heap_size]).
+                            total_heap_size,
+                            dictionary,
+                            initial_call,
+                            current_function,
+                            status]).

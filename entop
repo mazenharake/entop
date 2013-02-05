@@ -1,3 +1,4 @@
+#!/bin/bash
 ##==============================================================================
 ## Copyright 2010 Erlang Solutions Ltd.
 ##
@@ -16,7 +17,6 @@
 ## Author: Mazen Harake
 ## Shell script for running entop. See the function usage() for instructions.
 ##============================================================================== 
-#!/bin/bash
 TARGETNODE=
 NAME="-sname entop"
 COOKIE=

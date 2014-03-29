@@ -60,7 +60,7 @@ header(SystemInfo, State) ->
     CPUAvg1 = proplists:get_value(avg1, CPUInfo, 0.0),
     CPUAvg5 = proplists:get_value(avg5, CPUInfo, 0.0),
     CPUAvg15 = proplists:get_value(avg15, CPUInfo, 0.0),
-    Row1 = io_lib:format("Time: ~s, up for ~s, ~pms latency, load average: ~.2f, ~.2f, ~5.2f",
+    Row1 = io_lib:format("Time: ~s, up for ~s, ~pms latency, load average: ~.2f, ~.2f, ~.2f",
 			 [LocalTime, Uptime, PingTime, CPUAvg1, CPUAvg5, CPUAvg15]),
 
     PTotal = proplists:get_value(process_count, SystemInfo),
@@ -74,14 +74,14 @@ header(SystemInfo, State) ->
     MemInfo = proplists:get_value(memory, SystemInfo),
     SystemMem = mem2str(proplists:get_value(system, MemInfo)),
     AtomMem = mem2str(proplists:get_value(atom, MemInfo)),
-    AtomUsedMem = mem2str(proplists:get_value(atom_used, MemInfo)),
     BinMem = mem2str(proplists:get_value(binary, MemInfo)),
     CodeMem = mem2str(proplists:get_value(code, MemInfo)),
     EtsMem = mem2str(proplists:get_value(ets, MemInfo)),
-    Row3 = io_lib:format("Memory: ~s total, ~s allocated (~s system, ~s/~s atom, ~s binary, ~s code, ~s ets)",
-			 [PMemTotal, PMemUsed, SystemMem, AtomUsedMem, AtomMem, BinMem, CodeMem, EtsMem]),
-    Row4 = "",
-    {ok, [ lists:flatten(Row) || Row <- [Row1, Row2, Row3, Row4] ], State}.
+    Row3 = io_lib:format("Process Memory: ~s total (~s used)", [PMemTotal, PMemUsed]),
+    Row4 = io_lib:format("System Memory: ~s (Atom: ~s, Binary: ~s, Code: ~s, ETS: ~s)",
+			 [SystemMem, AtomMem, BinMem, CodeMem, EtsMem]),
+    Row5 = "",
+    {ok, [ lists:flatten(Row) || Row <- [Row1, Row2, Row3, Row4, Row5] ], State}.
 
 %% Column Specific Callbacks
 row([{pid,_}|undefined], _LastReductions, State) ->

@@ -185,7 +185,7 @@ update_screen(Time, HeaderData, RowDataList, State) ->
     State2.
 
 draw_title_bar(State) ->
-    cecho:move(6, 0),
+    cecho:move(7, 0),
     cecho:attron(?ceA_REVERSE),
     cecho:hline($ , ?MAX_HLINE),
     draw_title_bar(State#state.columns, 0),
@@ -194,17 +194,17 @@ draw_title_bar(State) ->
 draw_title_bar([], _) -> ok;
 draw_title_bar([{Title, Width, Options}|Rest], Offset) ->
     Align = proplists:get_value(align, Options, left),
-    cecho:mvaddstr(6, Offset, string:Align(Title, Width)++" "),
+    cecho:mvaddstr(7, Offset, string:Align(Title, Width)++" "),
     draw_title_bar(Rest, Offset + Width + 1).
 
 print_showinfo(State, RoundTripTime) ->
-    cecho:move(5, 0),
+    cecho:move(6, 0),
     cecho:hline($ , ?MAX_HLINE),
     ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
     SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
     Showing = io_lib:format("Interval ~pms, Sorting on ~p (~s), Retrieved in ~pms", 
 			    [State#state.interval, ColName, SortName, RoundTripTime div 1000]),
-    cecho:mvaddstr(5,0, lists:flatten(Showing)).
+    cecho:mvaddstr(6,0, lists:flatten(Showing)).
 
 process_header_data(HeaderData, State) ->
     {ok, Headers, NCBState} = (State#state.callback):header(HeaderData, State#state.cbstate),

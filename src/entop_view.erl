@@ -178,7 +178,7 @@ update_screen(Time, HeaderData, RowDataList, State) ->
     {RowList, State2} = process_row_data(RowDataList, State1), 
     SortedRowList = sort(RowList, State),
     {Y, _} = cecho:getmaxyx(),
-    StartY = (Y-(Y-7)),
+    StartY = (Y-(Y-8)),
     lists:foreach(fun(N) -> cecho:move(N, 0), cecho:hline($ , ?MAX_HLINE) end, lists:seq(StartY, Y)),
     update_rows(SortedRowList, State2#state.columns, StartY, Y),
     cecho:refresh(),
@@ -204,7 +204,7 @@ print_showinfo(State, RoundTripTime) ->
     SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
     Showing = io_lib:format("Interval ~pms, Sorting on ~p (~s), Retrieved in ~pms", 
 			    [State#state.interval, ColName, SortName, RoundTripTime div 1000]),
-    cecho:mvaddstr(6,0, lists:flatten(Showing)).
+    cecho:mvaddstr(6, 0, lists:flatten(Showing)).
 
 process_header_data(HeaderData, State) ->
     {ok, Headers, NCBState} = (State#state.callback):header(HeaderData, State#state.cbstate),

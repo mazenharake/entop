@@ -20,13 +20,16 @@
 -include("entop.hrl").
 
 %% Module API
--export([fetch_data/2, reconnect/2]).
+-export([fetch_data/2, reconnect/2, lookup_name/3]).
 
 %% =============================================================================
 %% Module API
 %% =============================================================================
 fetch_data(Node, Module) ->
     timer:tc(rpc, call, [Node, Module, get_data, []]).
+
+lookup_name(Node, Module, Pid) when is_pid(Pid) ->
+    rpc:call(Node, Module, lookup_name, [Pid]).
 
 reconnect(Parent, Node) ->
     case net_kernel:connect(Node) of

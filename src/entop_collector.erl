@@ -19,6 +19,7 @@
 
 %% Module API
 -export([get_data/0]).
+-export([lookup_name/1]).
 
 %% =============================================================================
 %% Module API
@@ -40,7 +41,7 @@ get_data() ->
             []
     end,
     Self = self(),
-    ProcessesProplist =  [ [ {pid,erlang:pid_to_list(P)} | process_info_items(P) ] ||
+    ProcessesProplist =  [ [ {pid,erlang:pid_to_list(P)}, {realpid, P}  | process_info_items(P) ] ||
 			     P <- erlang:processes(), P /= Self ],
 
     {ok, HeaderProplist1, ProcessesProplist}.
@@ -62,3 +63,10 @@ process_info_items(P) ->
 
 os_mon_started() ->
     [App || {os_mon, _, _} = App <- application:which_applications()] /= [].
+
+lookup_name(Pid) when is_pid(Pid) ->
+    {gproc, Props} = gproc:info(Pid, gproc),
+    case [ E || {E,_} <- Props, element(1,E)==n ] of
+        [] -> undefined;
+        [Ret] -> Ret
+    end.

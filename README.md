@@ -54,6 +54,15 @@ Ctrl-C:
 '<' and '>':
   Moves the sorting column to the left or right respectively (these are the lower/greater-than-tags; not arrow keys).
 
+### GProc Support
+
+When entop starts, it checks if the ````gproc```` module is loaded on the target. If so, for processes with no ````registered_name````, entop checks for a gproc name, typically set using ````gen_server:start({via, gproc, ...} ...````.
+
+Retrieving the gproc name for all processes at once is expensive, so names are dynamically fetched as rows are rendered.
+The resulting pid/name results are cached in a local-to-entop ets table. The number of name lookups made is indicated in the table header.
+
+GProc names are prefixed with ````l```` or ````g```` to indicate local or global registration.
+
 Contribute
 ----------
 Should you find yourself using entop and have issues, comments or feedback please [create an issue!] [1]

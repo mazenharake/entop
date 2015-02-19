@@ -244,6 +244,8 @@ update_rows([RowValues|Rest], Columns, LineNumber, Max) ->
     update_rows(Rest, Columns, LineNumber + 1, Max).
 
 update_row(R, C, _, _) when R == [] orelse C == [] -> ok;
+update_row([RowColValue|Rest], ColOpts, LineNumber, Offset) when is_function(RowColValue) ->
+    update_row([RowColValue()|Rest], ColOpts, LineNumber, Offset);
 update_row([RowColValue|Rest], [{_,Width,Options}|RestColumns], LineNumber, Offset) ->
     StrColVal = if is_list(RowColValue) ->
 			RowColValue;

@@ -38,6 +38,7 @@
 %% Module API
 %% =============================================================================
 init(Node) ->
+    ets:new(piddb, [set,named_table]),
     Columns = [
             {"Pid", 16, [{align, left}]},
             {"Process", 30, [{align, left}]},
@@ -71,8 +72,8 @@ header(SystemInfo, State) ->
     PTotal = proplists:get_value(process_count, SystemInfo),
     RQueue = proplists:get_value(run_queue, SystemInfo),
     RedTotal = element(2,proplists:get_value(reduction_count, SystemInfo)),
-    Row2 = io_lib:format("Processes: ~6w,  Run Queue: ~5w,  Reductions: ~9w~n",
-			 [PTotal, RQueue, RedTotal]),
+    Row2 = io_lib:format("Processes: ~6w,  Run Queue: ~5w,  Reductions: ~9w namerpcs: ~B~n",
+			 [PTotal, RQueue, RedTotal, ets:info(piddb,size)]),
 
     PMemUsed = mem2str(proplists:get_value(process_memory_used, SystemInfo)),
     PMemTotal = mem2str(proplists:get_value(process_memory_total, SystemInfo)),
@@ -88,12 +89,38 @@ header(SystemInfo, State) ->
     Row5 = "",
     {ok, [ lists:flatten(Row) || Row <- [Row1, Row2, Row3, Row4, Row5] ], State}.
 
+lookup_name(Props, State=#state{}) when is_list(Props) ->
+    case proplists:get_value(registered_name, Props) of
+        [] ->
+            Pid = proplists:get_value(realpid, Props),
+            case ets:lookup(piddb, Pid) of
+                [{Pid,Val}] -> Val;
+                [] ->
+                    Val = entop_net:lookup_name(State#state.node, entop_collector, Pid),
+                    ets:insert(piddb, {Pid, Val}),
+                    Val
+            end;
+        N ->
+            N
+    end.
+format_name(Name) ->
+    case Name of
+        []          -> [];
+        undefined   -> [];
+        Name when is_atom(Name) ->
+                       atom_to_list(Name);
+        {n,g,T}     -> lists:flatten(io_lib:format("g:~p",[T]));
+        {n,l,T}     -> lists:flatten(io_lib:format("l:~p",[T]));
+        Name        -> lists:flatten(io_lib:format("~p",[Name]))
+    end.
+
 %% Column Specific Callbacks
-row([{pid,_}|undefined], _LastReductions, State) ->
+row([{pid,_},{realpid,_}|undefined], _LastReductions, State) ->
     {ok, skip, State};
 row(ProcessInfo, LastReductions, State) ->
     Pid = proplists:get_value(pid, ProcessInfo),
-    ProcessName = proc_name(ProcessInfo),
+    %% defer, only called if this row is rendered:
+    ProcessName = fun() -> proc_name(ProcessInfo, State) end,
     CurrentFunction = proplists:get_value(current_function, ProcessInfo),
     Reductions = proplists:get_value(reductions, ProcessInfo, 0),
     ReductionsDiff = Reductions - LastReductions,
@@ -106,8 +133,8 @@ row(ProcessInfo, LastReductions, State) ->
 row_reductions({Pid, _, _, _, Reductions, _, _, _, _} = _Row) ->
 	{Pid, Reductions}.
 
-proc_name(ProcessInfo) ->
-    case proplists:get_value(registered_name, ProcessInfo, []) of
+proc_name(ProcessInfo, State) ->
+    case format_name(lookup_name(ProcessInfo, State)) of
         [] -> initial_call(ProcessInfo);
         Name -> Name
     end.

@@ -47,6 +47,7 @@ init(Node) ->
             {"Reductions", 13, [{align, right}]},
             {"Reductions+", 13, [{align, right}]},
             {"Message Queue", 14, [{align, right}]},
+            {"Memory", 15, [{align, right}]},
             {"Stack Size", 11, [{align, right}]},
             {"Heap Size", 12, [{align, right}]}
         ],
@@ -125,12 +126,13 @@ row(ProcessInfo, LastReductions, State) ->
     Reductions = proplists:get_value(reductions, ProcessInfo, 0),
     ReductionsDiff = Reductions - LastReductions,
     Queue = proplists:get_value(message_queue_len, ProcessInfo, 0),
+    Memory = proplists:get_value(memory, ProcessInfo, 0),
     StackSize = proplists:get_value(stack_size, ProcessInfo, 0),
     TotalHeapSize = proplists:get_value(total_heap_size, ProcessInfo, 0),
     Status = proplists:get_value(status, ProcessInfo),
-    {ok, {Pid, ProcessName, CurrentFunction, Status, Reductions, ReductionsDiff, Queue, StackSize, TotalHeapSize}, State}.
+    {ok, {Pid, ProcessName, CurrentFunction, Status, Reductions, ReductionsDiff, Queue, Memory, StackSize, TotalHeapSize}, State}.
 
-row_reductions({Pid, _, _, _, Reductions, _, _, _, _} = _Row) ->
+row_reductions({Pid, _, _, _, Reductions, _, _, _, _, _} = _Row) ->
 	{Pid, Reductions}.
 
 proc_name(ProcessInfo, State) ->

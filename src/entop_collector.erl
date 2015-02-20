@@ -56,6 +56,7 @@ process_info_items(P) ->
                             heap_size,
                             stack_size,
                             total_heap_size,
+                            memory,
                             dictionary,
                             initial_call,
                             current_function,

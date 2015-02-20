@@ -36,6 +36,7 @@ reconnect(Parent, Node) ->
 	true ->
 	    Parent ! {nodeup, Node};
 	false ->
+        catch ets:delete_all_objects(piddb),
 	    timer:sleep(1000),
 	    reconnect(Parent, Node)
     end.

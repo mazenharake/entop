@@ -56,12 +56,17 @@ header(SystemInfo, State) ->
     Uptime = millis2uptimestr(element(1, proplists:get_value(uptime, SystemInfo, 0))),
     LocalTime = local2str(element(2, proplists:get_value(local_time, SystemInfo))),
     PingTime = element(1,timer:tc(net_adm, ping, [State#state.node])) div 1000,
-    CPUInfo = proplists:get_value(cpu, SystemInfo, []),
-    CPUAvg1 = proplists:get_value(avg1, CPUInfo, 0.0),
-    CPUAvg5 = proplists:get_value(avg5, CPUInfo, 0.0),
-    CPUAvg15 = proplists:get_value(avg15, CPUInfo, 0.0),
-    Row1 = io_lib:format("Time: ~s, up for ~s, ~pms latency, load average: ~.2f, ~.2f, ~.2f",
-			 [LocalTime, Uptime, PingTime, CPUAvg1, CPUAvg5, CPUAvg15]),
+
+    Row1Essentials = io_lib:format("Time: ~s, up for ~s, ~pms latency", [LocalTime, Uptime, PingTime]),
+    Row1 = Row1Essentials ++ case proplists:get_value(cpu, SystemInfo, []) of
+        [] ->
+            [];
+        CPUInfo ->
+            CPUAvg1 = proplists:get_value(avg1, CPUInfo, 0.0),
+            CPUAvg5 = proplists:get_value(avg5, CPUInfo, 0.0),
+            CPUAvg15 = proplists:get_value(avg15, CPUInfo, 0.0),
+            io_lib:format(", load average: ~.2f, ~.2f, ~.2f", [CPUAvg1, CPUAvg5, CPUAvg15])
+    end,
 
     PTotal = proplists:get_value(process_count, SystemInfo),
     RQueue = proplists:get_value(run_queue, SystemInfo),

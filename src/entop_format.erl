@@ -132,8 +132,8 @@ row(ProcessInfo, LastReductions, State) ->
     Status = proplists:get_value(status, ProcessInfo),
     {ok, {Pid, ProcessName, CurrentFunction, Status, Reductions, ReductionsDiff, Queue, Memory, StackSize, TotalHeapSize}, State}.
 
-row_reductions({Pid, _, _, _, Reductions, _, _, _, _, _} = _Row) ->
-	{Pid, Reductions}.
+row_reductions({_Pid, _, _, _, Reductions, _, _, _, _, _} = _Row) ->
+	Reductions.
 
 proc_name(ProcessInfo, State) ->
     case format_name(lookup_name(ProcessInfo, State)) of

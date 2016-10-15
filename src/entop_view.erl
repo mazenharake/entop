@@ -211,22 +211,22 @@ process_header_data(HeaderData, State) ->
     {Headers, State#state{ cbstate = NCBState }}.
 
 process_row_data(RowDataList, State) ->
-    prd(RowDataList, State, []).
+    prd(RowDataList, State, {[], dict:new()}).
 
-prd([], State, Acc) ->
-    NLRPL = [(State#state.callback):row_reductions(Row) || Row <- Acc],
-    {Acc, State#state{last_reductions = NLRPL}};
-prd([RowData|Rest], #state{last_reductions = LRPL} = State, Acc) ->
+prd([], State, {Acc, NLRD}) ->
+    {Acc, State#state{last_reductions = NLRD}};
+prd([RowData|Rest], #state{last_reductions = LRD} = State, FullAcc = {Acc, LRDAcc}) ->
     Pid = proplists:get_value(pid, RowData),
-	LastReductions = case proplists:get_value(Pid, LRPL) of
-		undefined -> 0;
-		N -> N
+	LastReductions = case dict:find(Pid, LRD) of
+		error -> 0;
+		{ok, N} -> N
 	end,
 	case (State#state.callback):row(RowData, LastReductions, State#state.cbstate) of
 		{ok, skip, NCBState} ->
-			prd(Rest, State#state{ cbstate = NCBState }, Acc);
+			prd(Rest, State#state{ cbstate = NCBState }, FullAcc);
 		{ok, Row, NCBState} ->
-			prd(Rest, State#state{ cbstate = NCBState }, [Row|Acc])
+			NReds = (State#state.callback):row_reductions(Row),
+			prd(Rest, State#state{ cbstate = NCBState }, {[Row|Acc], dict:store(Pid, NReds, LRDAcc)})
 	end.
 
 sort(ProcList, State) ->

@@ -66,8 +66,12 @@ os_mon_started() ->
     [App || {os_mon, _, _} = App <- application:which_applications()] /= [].
 
 lookup_name(Pid) when is_pid(Pid) ->
-    {gproc, Props} = gproc:info(Pid, gproc),
-    case [ E || {E,_} <- Props, element(1,E)==n ] of
-        [] -> undefined;
-        [Ret] -> Ret
-    end.
+  case whereis(gproc) of
+    undefined -> undefined;
+    _ ->
+      {gproc, Props} = gproc:info(Pid, gproc),
+      case [ E || {E,_} <- Props, element(1,E)==n ] of
+          [] -> undefined;
+          [Ret] -> Ret
+      end
+  end.

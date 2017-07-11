@@ -12,14 +12,15 @@ For entop to run it needs `cecho 0.5.1` or higher
 To clean/compile run
 
     ./rebar3 clean
-    ./rebar3 escriptize
+    ./rebar3 compile
 
-A relocatable escript named 'entop' is now in '_build/default/bin/entop', you can copy that to your path somewhere.
+You can now ensure that cecho and entop are installed in your erlang libs dir,
+then you can copy the entop script to a bin directory
 
 ## Usage
-To run entop make sure you have Erlang installed and that the escript is in your path.
+To run entop make sure you have Erlang installed, cecho and entop libraries installed, and that the script is in your path.
 
-    Usage: ./entop <TARGETNODE> [<COOKIE>]
+    Usage: ./entop <TARGETNODE> <COOKIE>
 
 ### An example of how you run entop:
 

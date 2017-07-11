@@ -1,5 +1,6 @@
 *.beam
 deps
+ebin
 _build
 .rebar3
 rebar.lock

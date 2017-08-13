@@ -27,11 +27,10 @@
 
 ## Shell script for running entop. See the function usage() for instructions.
 TARGETNODE=
-NAME="-sname entop"
 COOKIE=
 
 function usage() {
-    echo -e "Usage: ./entop <TARGETNODE> [-name <NAME>|-sname <SNAME>] [-setcookie <COOKIE>]"
+    echo -e "Usage: ./entop <TARGETNODE> <COOKIE>"
 }
 
 if [[ $# -lt 1 ]]; then
@@ -42,22 +41,17 @@ fi
 TARGETNODE=$1
 shift
 
+COOKIE=$1
+shift
 
-for ARG in $@;
-do
-    case $ARG in
-	"-name")
-	    NAME=; ;;
-	"-sname")
-	    NAME=; ;;
-	"-setcookie")
-	    COOKIE=; ;;
-    esac
-done
+if [[ -d _build ]] ; then
+  PATHS="-pa _build/default/lib/entop/ebin -pa _build/default/lib/cecho/ebin"
+else
+  PATHS=""
+fi
 
-DIRNAME=`(readlink -n $0 || echo $0) | xargs dirname`
-
-erl -noinput -hidden -pa $DIRNAME/ebin -pa $DIRNAME/deps/cecho/ebin +A 20 +Bc -eval "entop:start('${TARGETNODE}')" $NAME $COOKIE $@
+erl -noinput -hidden $PATHS +A 20 +Bc \
+    -eval "entop:main(['${TARGETNODE}','${COOKIE}'])" $@
 
 CODE=$?
 if [[ $CODE -eq 101 ]]; then

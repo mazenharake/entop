@@ -187,14 +187,14 @@ update_screen(Time, HeaderData, RowDataList, State) ->
     {RowList, State2} = process_row_data(RowDataList, State1), 
     SortedRowList = sort(RowList, State),
     {Y, _} = cecho:getmaxyx(),
-    StartY = (Y-(Y-7)),
+    StartY = (Y-(Y-8)),
     lists:foreach(fun(N) -> cecho:move(N, 0), cecho:hline($ , ?MAX_HLINE) end, lists:seq(StartY, Y)),
     update_rows(SortedRowList, State2#state.columns, StartY, Y),
     cecho:refresh(),
     State2.
 
 draw_title_bar(State) ->
-    cecho:move(6, 0),
+    cecho:move(7, 0),
     cecho:attron(?ceA_REVERSE),
     cecho:hline($ , ?MAX_HLINE),
     draw_title_bar(State#state.columns, 0),
@@ -203,34 +203,40 @@ draw_title_bar(State) ->
 draw_title_bar([], _) -> ok;
 draw_title_bar([{Title, Width, Options}|Rest], Offset) ->
     Align = proplists:get_value(align, Options, left),
-    cecho:mvaddstr(6, Offset, string:Align(Title, Width)++" "),
+    cecho:mvaddstr(7, Offset, string:Align(Title, Width)++" "),
     draw_title_bar(Rest, Offset + Width + 1).
 
 print_showinfo(State, RoundTripTime) ->
-    cecho:move(5, 0),
+    cecho:move(6, 0),
     cecho:hline($ , ?MAX_HLINE),
     ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
     SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
     Showing = io_lib:format("Interval ~pms, Sorting on ~p (~s), Retrieved in ~pms", 
 			    [State#state.interval, ColName, SortName, RoundTripTime div 1000]),
-    cecho:mvaddstr(5,0, lists:flatten(Showing)).
+    cecho:mvaddstr(6, 0, lists:flatten(Showing)).
 
 process_header_data(HeaderData, State) ->
     {ok, Headers, NCBState} = (State#state.callback):header(HeaderData, State#state.cbstate),
     {Headers, State#state{ cbstate = NCBState }}.
 
 process_row_data(RowDataList, State) ->
-    prd(RowDataList, State, []).
+    prd(RowDataList, State, {[], dict:new()}).
 
-prd([], State, Acc) ->
-    {Acc, State};
-prd([RowData|Rest], State, Acc) ->
-    case (State#state.callback):row(RowData, State#state.cbstate) of
-	{ok, skip, NCBState} ->
-	    prd(Rest, State#state{ cbstate = NCBState }, Acc); 
-	{ok, Row, NCBState} ->
-	    prd(Rest, State#state{ cbstate = NCBState }, [Row|Acc])
-    end.
+prd([], State, {Acc, NLRD}) ->
+    {Acc, State#state{last_reductions = NLRD}};
+prd([RowData|Rest], #state{last_reductions = LRD} = State, FullAcc = {Acc, LRDAcc}) ->
+    Pid = proplists:get_value(pid, RowData),
+	LastReductions = case dict:find(Pid, LRD) of
+		error -> 0;
+		{ok, N} -> N
+	end,
+	case (State#state.callback):row(RowData, LastReductions, State#state.cbstate) of
+		{ok, skip, NCBState} ->
+			prd(Rest, State#state{ cbstate = NCBState }, FullAcc);
+		{ok, Row, NCBState} ->
+			NReds = (State#state.callback):row_reductions(Row),
+			prd(Rest, State#state{ cbstate = NCBState }, {[Row|Acc], dict:store(Pid, NReds, LRDAcc)})
+	end.
 
 sort(ProcList, State) ->
     Sorted = lists:keysort(State#state.sort, ProcList),
@@ -247,6 +253,8 @@ update_rows([RowValues|Rest], Columns, LineNumber, Max) ->
     update_rows(Rest, Columns, LineNumber + 1, Max).
 
 update_row(R, C, _, _) when R == [] orelse C == [] -> ok;
+update_row([RowColValue|Rest], ColOpts, LineNumber, Offset) when is_function(RowColValue) ->
+    update_row([RowColValue()|Rest], ColOpts, LineNumber, Offset);
 update_row([RowColValue|Rest], [{_,Width,Options}|RestColumns], LineNumber, Offset) ->
     StrColVal = if is_list(RowColValue) ->
 			RowColValue;

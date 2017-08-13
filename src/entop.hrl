@@ -27,5 +27,5 @@
 %% Records 
 -record(state, { callback = entop_format, remote_module = entop_collector,
 		 columns, cbstate, node, otp_version, erts_version, os_fam, os,
-		 os_version, node_flags, interval = 1000, reverse_sort = true,
-		 sort = 1, connected = false }).
+		 os_version, node_flags, interval = 2000, reverse_sort = true,
+		 sort = 1, connected = false, last_reductions = dict:new()}).

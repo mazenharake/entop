@@ -28,6 +28,7 @@
 
 %% Module API
 -export([get_data/0]).
+-export([lookup_name/1]).
 
 %% =============================================================================
 %% Module API
@@ -42,11 +43,17 @@ get_data() ->
 		      {process_memory_total, erlang:memory(processes)},
 		      {memory, erlang:memory([system, atom, atom_used, binary, code, ets])}
 		     ],
+    HeaderProplist1 = HeaderProplist ++ case os_mon_started() of
+        true ->
+            [{cpu, [{avg1, cpu_sup:avg1() / 256}, {avg5, cpu_sup:avg5() / 256}, {avg15, cpu_sup:avg15() / 256}]}];
+        false ->
+            []
+    end,
     Self = self(),
-    ProcessesProplist =  [ [ {pid,erlang:pid_to_list(P)} | process_info_items(P) ] ||
+    ProcessesProplist =  [ [ {pid,erlang:pid_to_list(P)}, {realpid, P}  | process_info_items(P) ] ||
 			     P <- erlang:processes(), P /= Self ],
 
-    {ok, HeaderProplist, ProcessesProplist}.
+    {ok, HeaderProplist1, ProcessesProplist}.
 
 %% =============================================================================
 %% Internal Functions
@@ -57,4 +64,23 @@ process_info_items(P) ->
                             message_queue_len,
                             heap_size,
                             stack_size,
-                            total_heap_size]).
+                            total_heap_size,
+                            memory,
+                            dictionary,
+                            initial_call,
+                            current_function,
+                            status]).
+
+os_mon_started() ->
+    [App || {os_mon, _, _} = App <- application:which_applications()] /= [].
+
+lookup_name(Pid) when is_pid(Pid) ->
+  case whereis(gproc) of
+    undefined -> undefined;
+    _ ->
+      {gproc, Props} = gproc:info(Pid, gproc),
+      case [ E || {E,_} <- Props, element(1,E)==n ] of
+          [] -> undefined;
+          [Ret] -> Ret
+      end
+  end.

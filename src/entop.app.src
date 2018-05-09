@@ -1,6 +1,6 @@
 {application, entop,
  [{description, "A top-like tool for monitoring an erlang node"},
-  {vsn, "0.3.0"},
+  {vsn, "0.3.1"},
   {registered, []},
   {applications,
    [kernel,

@@ -35,18 +35,17 @@
 %% Module API
 %% =============================================================================
 fetch_data(Node, Module) ->
-    timer:tc(rpc, call, [Node, Module, get_data, []]).
+  timer:tc(rpc, call, [Node, Module, get_data, []]).
 
 lookup_name(Node, Module, Pid) when is_pid(Pid) ->
-    rpc:call(Node, Module, lookup_name, [Pid]).
+  rpc:call(Node, Module, lookup_name, [Pid]).
 
 reconnect(Parent, Node) ->
-    case net_kernel:connect(Node) of
-	true ->
-	    Parent ! {nodeup, Node};
-	false ->
-        catch ets:delete_all_objects(piddb),
-	    timer:sleep(1000),
-	    reconnect(Parent, Node)
-    end.
-	
+  case net_kernel:connect(Node) of
+    true ->
+      Parent ! {nodeup, Node};
+    false ->
+      catch ets:delete_all_objects(piddb),
+      timer:sleep(1000),
+      reconnect(Parent, Node)
+  end.

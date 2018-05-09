@@ -118,29 +118,29 @@ name_type (Node) when is_list(Node) ->
 %% Application API
 %% =============================================================================
 start(Node) ->
-    State = #state{ node = Node },
-    case net_kernel:connect(Node) of
-	true ->
-	    ViewPid = entop_view:start(State#state{ connected = true }),
-	    control(ViewPid);
-	false ->
-	    halt(101)
-    end.
+  State = #state{ node = Node },
+  case net_kernel:connect(Node) of
+    true ->
+      ViewPid = entop_view:start(State#state{ connected = true }),
+      control(ViewPid);
+    false ->
+      halt(101)
+  end.
 
 control(ViewPid) ->
-    P = cecho:getch(),
-    case P of
-	N when N >= 49 andalso N =< 57 -> ViewPid ! {sort, N - 48}, control(ViewPid);
-	$> -> ViewPid ! {sort, next}, control(ViewPid);
-	$< -> ViewPid ! {sort, prev}, control(ViewPid);
-	$r -> ViewPid ! reverse_sort, control(ViewPid);
-	$q -> do_exit(ViewPid);
-	3 -> do_exit(ViewPid); %Ctrl-C
-	_ -> ViewPid ! force_update, control(ViewPid)
-    end.
+  P = cecho:getch(),
+  case P of
+    N when N >= 49 andalso N =< 57 -> ViewPid ! {sort, N - 48}, control(ViewPid);
+    $> -> ViewPid ! {sort, next}, control(ViewPid);
+    $< -> ViewPid ! {sort, prev}, control(ViewPid);
+    $r -> ViewPid ! reverse_sort, control(ViewPid);
+    $q -> do_exit(ViewPid);
+    3 -> do_exit(ViewPid); %Ctrl-C
+    _ -> ViewPid ! force_update, control(ViewPid)
+  end.
 
 do_exit(ViewPid) ->
-    exit(ViewPid, normal), 
-    application:stop(cecho),
-    halt().
+  exit(ViewPid, normal),
+  application:stop(cecho),
+  halt().
 

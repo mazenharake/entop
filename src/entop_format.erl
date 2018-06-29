@@ -29,10 +29,10 @@
 -include_lib("cecho/include/cecho.hrl").
 
 %% Module API
--export([init/1, header/2, row/3, row_reductions/1]).
+-export([init/1, resize/2, header/2, row/3, row_reductions/1]).
 
 %% Records
--record(state, { node = undefined, cache = [] }).
+-record(state, { node = undefined, cache = [], default_columns = [] }).
 
 %% Defines
 -define(KIB,(1024)).
@@ -60,7 +60,19 @@ init(Node) ->
              {"Stack Size", 11, [{align, right}]},
              {"Heap Size", 12, [{align, right}]}
             ],
-  {ok, {Columns, 6}, #state{ node = Node }}.
+  {ok, {Columns, 6}, #state{ node = Node, default_columns=Columns }}.
+
+resize(Width, State) ->
+    Columns = State#state.default_columns,
+    TotalWidth = lists:sum([ X || {_, X, _} <- Columns]),
+    ExpandedColumns = case (Width - (TotalWidth + length(Columns))) of
+                          ExtraCols when (ExtraCols - length(Columns)) > 0 ->
+                              ExtraPerColumn = ExtraCols div length(Columns),
+                              [ {Title, ColWidth + ExtraPerColumn, Style} || {Title, ColWidth, Style} <- Columns];
+                          _ ->
+                              Columns
+                      end,
+    {ok, ExpandedColumns}.
 
 %% Header Callback
 header(SystemInfo, State) ->

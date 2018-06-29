@@ -110,7 +110,7 @@ name_type (Node) when is_list(Node) ->
         end,
       rand_seed(),
       R = rand_uniform(1000000),
-      EntopName = list_to_atom("entop-" ++ integer_to_list(R) ++ "-" ++ N),
+      EntopName = list_to_atom("entop-" ++ integer_to_list(R) ++ "-" ++ N ++ "@" ++ H),
       {ok,[EntopName,T]}
   end.
 

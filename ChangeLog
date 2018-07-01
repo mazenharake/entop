@@ -1,0 +1,23 @@
+* Tue Jul 10 2018 Anthony Molinaro (djnym) 0.4.0
+- Support column resize on window resize (thanks Vagabond)
+- Support nodenames of the form app@127.0.0.1 (thanks Vagabond)
+- Cleanup of state records
+- Sorting based on numbers 1-9 switched to 0-9 as we have 10 columns now
+- ChangeLog added and version in .app.src derived from ChangeLog
+- Added convenience Makefile
+
+* Tue May 08 2018 Anthony Molinaro (djnym) 0.3.1
+- Update version of cecho
+
+* Sun Aug 13 2017 Mazen Harake (mazenharake) 0.3.0
+- Update to use rebar3
+
+* Sat Jun 11 2017 Mazen Harake (mazenharake) 0.2.0
+- License changed to BSD
+
+* Mon Aug 16 2010 Mazen Harake (mazenharake) 0.0.1
+First release
+- Shows most common information which is needed when monitoring a remote
+Erlang node
+- Sorting can be done on any column and sorting can be reversed
+- Easy to extend by specifiying own callback modules

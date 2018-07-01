@@ -26,7 +26,6 @@
 
 -module(entop).
 
--include("entop.hrl").
 -include_lib("cecho/include/cecho.hrl").
 
 %% escript bits
@@ -65,14 +64,12 @@ main([NodeIn,CookieIn]) ->
         {ok, _} ->
           case maybe_set_cookie(Node,Cookie) of
             ok ->
-              case net_kernel:connect(Node) of
-                true ->
-                  ViewPid = entop_view:start(#state{ node = Node,
-                                                     connected = true }),
-                  control(ViewPid);
-                false ->
+              case start(Node) of
+                {error, cant_connect} ->
                   io:format("Unable to connect to '~p', check nodename, cookie and network~n",[Node]),
-                  halt(101)
+                  halt(101);
+                Started ->
+                  Started
               end;
             CE ->
               io:format("Cookie ~p is malformed, got error ~p~n", [Cookie,CE]),
@@ -118,19 +115,17 @@ name_type (Node) when is_list(Node) ->
 %% Application API
 %% =============================================================================
 start(Node) ->
-  State = #state{ node = Node },
-  case net_kernel:connect(Node) of
-    true ->
-      ViewPid = entop_view:start(State#state{ connected = true }),
-      control(ViewPid);
-    false ->
-      halt(101)
-  end.
+   case entop_view:start(Node) of
+     {ok, ViewPid} -> control(ViewPid);
+     E -> E
+   end.
 
 control(ViewPid) ->
   P = cecho:getch(),
   case P of
-    N when N >= 49 andalso N =< 57 -> ViewPid ! {sort, N - 48}, control(ViewPid);
+    N when N >= 48 andalso N =< 57 ->
+      % allow 0-9 to sort based on those columns
+      ViewPid ! {sort, N - 48}, control(ViewPid);
     $> -> ViewPid ! {sort, next}, control(ViewPid);
     $< -> ViewPid ! {sort, prev}, control(ViewPid);
     $r -> ViewPid ! reverse_sort, control(ViewPid);

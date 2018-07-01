@@ -40,9 +40,9 @@ entop's interface can be customized so this section only applies for the "built-
 
 ### Commands when running entop:
 
-[1-N]:
-  Sort on column number 1 through N. Starts with first column (1) and up to N
-  where N is the last column.
+[0-9]:
+  Sort on column number 0 through 9. Starts with first column (0)
+  and up to the last column (9).
 
 r:
   Toggles the sorting order from ascending to descending and vice versa.
@@ -54,7 +54,8 @@ Ctrl-C:
   Same as 'q'.
 
 '<' and '>':
-  Moves the sorting column to the left or right respectively (these are the lower/greater-than-tags; not arrow keys).
+  Moves the sorting column to the left or right respectively
+  (these are the lower/greater-than-tags; not arrow keys).
 
 ### GProc Support
 

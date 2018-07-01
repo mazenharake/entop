@@ -26,8 +26,6 @@
 
 -module(entop_net).
 
--include("entop.hrl").
-
 %% Module API
 -export([fetch_data/2, reconnect/2, lookup_name/3]).
 

@@ -26,7 +26,6 @@
 
 -module(entop_view).
 
--include("entop.hrl").
 -include_lib("cecho/include/cecho.hrl").
 
 %% Module API
@@ -35,16 +34,41 @@
 %% Defines
 -define(MAX_HLINE, 300).
 
+%% Records
+-record(state, { callback = entop_format,
+                 remote_module = entop_collector,
+                 maxyx,
+                 columns,
+                 cbstate,
+                 node,
+                 otp_version,
+                 erts_version,
+                 os_fam,
+                 os,
+                 os_version,
+                 node_flags,
+                 interval = 2000,
+                 reverse_sort = true,
+                 sort = 0,
+                 connected = false,
+                 last_reductions = dict:new() }).
+
 %% =============================================================================
 %% Module API
 %% =============================================================================
-start(State) ->
+start(Node) ->
   Parent = self(),
-  NState = load_remote_static_data(State),
-  remote_load_code(NState#state.remote_module, State#state.node),
-  ViewPid = erlang:spawn(fun() -> init(Parent, NState) end),
-  receive continue -> ok end,
-  ViewPid.
+  case net_kernel:connect(Node) of
+    true ->
+      State = #state { node = Node, connected = true },
+      NState = load_remote_static_data(State),
+      remote_load_code(NState#state.remote_module, State#state.node),
+      ViewPid = erlang:spawn(fun() -> init(Parent, NState) end),
+      receive continue -> ok end,
+      {ok, ViewPid};
+    false ->
+      {error, cant_connect}
+  end.
 
 reload(ViewPid) ->
   ViewPid ! reload.
@@ -70,28 +94,32 @@ remote_load_code(Module, Node) ->
   {_, Binary, Filename} = code:get_object_code(Module),
   rpc:call(Node, code, load_binary, [Module, Filename, Binary]).
 
-init(Parent, State) ->
+init(Parent, State0) ->
   process_flag(trap_exit, true),
   application:start(cecho),
   ok = cecho:cbreak(),
   ok = cecho:noecho(),
   ok = cecho:curs_set(?ceCURS_INVISIBLE),
   ok = cecho:keypad(?ceSTDSCR, true),
-  NState = init_callback(State),
-  print_nodeinfo(NState),
+  % keep track of the max screen size so we can resize if necessary
+  MaxYX = cecho:getmaxyx(),
+  State1 = State0#state { maxyx = MaxYX },
+
+  State2 = init_callback(State1),
+  print_nodeinfo(State2),
   Parent ! continue,
   self() ! time_update,
-  loop(Parent, NState).
+  loop(Parent, State2).
 
 init_callback(State) ->
   case (State#state.callback):init(State#state.node) of
-    {ok, {Columns, DefaultSort}, CBState} when DefaultSort =< length(Columns)
-                                               andalso DefaultSort >= 1 ->
-      NSort = DefaultSort;
+    {ok, {Columns, DefaultSort}, CBState}
+      when DefaultSort >= 0 andalso DefaultSort < length(Columns) ->
+      % sorting is based on 0 indices so all columns can be sorted on
+      State#state{ columns = Columns, cbstate = CBState, sort = DefaultSort };
     {ok, {Columns, _}, CBState} ->
-      NSort = 1
-  end,
-  State#state{ columns = Columns, cbstate = CBState, sort = NSort }.
+      State#state{ columns = Columns, cbstate = CBState, sort = 0 }
+  end.
 
 print_nodeinfo(State) ->
   cecho:move(0, 0),
@@ -139,10 +167,11 @@ loop(Parent, State) ->
       State2 = update_sort_screen(State, N),
       loop(Parent, State2);
     {sort, Direction} ->
-      case Direction of
-        next -> State2 = update_sort_screen(State, State#state.sort + 1);
-        prev -> State2 = update_sort_screen(State, State#state.sort - 1)
-      end,
+      State2 =
+        case Direction of
+          next -> update_sort_screen(State, State#state.sort + 1);
+          prev -> update_sort_screen(State, State#state.sort - 1)
+        end,
       loop(Parent, State2);
     reverse_sort ->
       State2 = fetch_and_update(State#state{ reverse_sort = (not State#state.reverse_sort) }, true),
@@ -171,29 +200,39 @@ fetch_and_update(State, IsForced) ->
   end.
 
 update_sort_screen(State, N) ->
-  if N >= 1 andalso N =< length(State#state.columns) ->
-       fetch_and_update(State#state{ sort = N }, true);
-     true -> State
+  case N >= 0 andalso N < length(State#state.columns) of
+    true -> fetch_and_update(State#state{ sort = N }, true);
+    false -> State
   end.
 
-update_screen(Time, HeaderData, RowDataList, State) ->
-  print_nodeinfo(State),
-  draw_title_bar(State),
-  print_showinfo(State, Time),
-  {Headers, State1} = process_header_data(HeaderData, State),
+update_screen(Time, HeaderData, RowDataList, State0) ->
+  % check to see if the screen has changed and if it has resize it
+  NewMaxYX = {MaxY, MaxX} = cecho:getmaxyx(),
+  State1 =
+    case NewMaxYX =:= State0#state.maxyx of
+      true -> State0;
+      false ->
+        % then resize the columns if it has
+        {ok, Columns} =
+          (State0#state.callback):resize(MaxX, State0#state.cbstate),
+        State0#state{columns = Columns}
+    end,
+
+  print_nodeinfo(State1),
+  draw_title_bar(State1),
+  print_showinfo(State1, Time),
+  {Headers, State2} = process_header_data(HeaderData, State1),
   lists:foldl(fun(Header, Y) ->
                   cecho:hline($ , ?MAX_HLINE),
                   cecho:mvaddstr(Y, 0, Header), Y + 1
               end, 1, Headers),
-  {RowList, State2} = process_row_data(RowDataList, State1),
-  SortedRowList = sort(RowList, State),
-  {Y, X} = cecho:getmaxyx(),
-  {ok, Columns} = (State#state.callback):resize(X, State2#state.cbstate),
-  StartY = (Y-(Y-8)),
-  lists:foreach(fun(N) -> cecho:move(N, 0), cecho:hline($ , ?MAX_HLINE) end, lists:seq(StartY, Y)),
-  update_rows(SortedRowList, Columns, StartY, Y),
+  {RowList, State3} = process_row_data(RowDataList, State2),
+  SortedRowList = sort(RowList, State3),
+  StartY = (MaxY-(MaxY-8)),
+  lists:foreach(fun(N) -> cecho:move(N, 0), cecho:hline($ , ?MAX_HLINE) end, lists:seq(StartY, MaxY)),
+  update_rows(SortedRowList, State3#state.columns, StartY, MaxY),
   cecho:refresh(),
-  State2#state{columns=Columns}.
+  State3.
 
 draw_title_bar(State) ->
   cecho:move(7, 0),
@@ -211,7 +250,7 @@ draw_title_bar([{Title, Width, Options}|Rest], Offset) ->
 print_showinfo(State, RoundTripTime) ->
   cecho:move(6, 0),
   cecho:hline($ , ?MAX_HLINE),
-  ColName = element(1,lists:nth(State#state.sort, State#state.columns)),
+  ColName = element(1,lists:nth(State#state.sort+1, State#state.columns)),
   SortName = if State#state.reverse_sort -> "Descending"; true -> "Ascending" end,
   Showing = io_lib:format("Interval ~pms, Sorting on ~p (~s), Retrieved in ~pms",
                           [State#state.interval, ColName, SortName, RoundTripTime div 1000]),
@@ -241,7 +280,7 @@ prd([RowData|Rest], #state{last_reductions = LRD} = State, FullAcc = {Acc, LRDAc
   end.
 
 sort(ProcList, State) ->
-  Sorted = lists:keysort(State#state.sort, ProcList),
+  Sorted = lists:keysort(State#state.sort+1, ProcList),
   case State#state.reverse_sort of
     true ->
       lists:reverse(Sorted);

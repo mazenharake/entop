@@ -1,6 +1,6 @@
 {application, entop,
  [{description, "A top-like tool for monitoring an erlang node"},
-  {vsn, "0.3.1"},
+  {vsn, {cmd, "/bin/bash -c 'awk \"match(\\$0, /[0-9]+\\.[0-9]+(\\.[0-9]+)+/){print substr(\\$0, RSTART,RLENGTH); exit}\" ChangeLog'"}},
   {registered, []},
   {applications,
    [kernel,
@@ -10,6 +10,6 @@
   {env,[]},
   {modules, [entop,  entop_collector, entop_format, entop_view, entop_net]},
   {maintainers, []},
-  {licenses, ["Apache 2.0"]},
+  {licenses, ["BSD"]},
   {links, []}
  ]}.

@@ -60,7 +60,7 @@ init(Node) ->
              {"Stack Size", 11, [{align, right}]},
              {"Heap Size", 12, [{align, right}]}
             ],
-  {ok, {Columns, 6}, #state{ node = Node, default_columns=Columns }}.
+  {ok, {Columns, 5}, #state{ node = Node, default_columns=Columns }}.
 
 resize(Width, State) ->
     Columns = State#state.default_columns,

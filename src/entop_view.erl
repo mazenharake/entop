@@ -187,12 +187,13 @@ update_screen(Time, HeaderData, RowDataList, State) ->
               end, 1, Headers),
   {RowList, State2} = process_row_data(RowDataList, State1),
   SortedRowList = sort(RowList, State),
-  {Y, _} = cecho:getmaxyx(),
+  {Y, X} = cecho:getmaxyx(),
+  {ok, Columns} = (State#state.callback):resize(X, State2#state.cbstate),
   StartY = (Y-(Y-8)),
   lists:foreach(fun(N) -> cecho:move(N, 0), cecho:hline($ , ?MAX_HLINE) end, lists:seq(StartY, Y)),
-  update_rows(SortedRowList, State2#state.columns, StartY, Y),
+  update_rows(SortedRowList, Columns, StartY, Y),
   cecho:refresh(),
-  State2.
+  State2#state{columns=Columns}.
 
 draw_title_bar(State) ->
   cecho:move(7, 0),

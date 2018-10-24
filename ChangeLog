@@ -1,3 +1,6 @@
+* Wed Oct 24 2018 Anthony Molinaro (djnym) 0.4.1
+- update cecho dependency
+
 * Tue Jul 10 2018 Anthony Molinaro (djnym) 0.4.0
 - Support column resize on window resize (thanks Vagabond)
 - Support nodenames of the form app@127.0.0.1 (thanks Vagabond)

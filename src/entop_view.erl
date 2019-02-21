@@ -58,7 +58,7 @@
 %% =============================================================================
 start(Node) ->
   Parent = self(),
-  case net_kernel:connect(Node) of
+  case net_kernel:connect_node(Node) of
     true ->
       State = #state { node = Node, connected = true },
       NState = load_remote_static_data(State),

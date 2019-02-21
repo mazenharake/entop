@@ -1,3 +1,6 @@
+* Thu Feb 21 2019 Anthony Molinaro (djnym) 0.4.2
+- fix for OTP-21
+
 * Wed Oct 24 2018 Anthony Molinaro (djnym) 0.4.1
 - update cecho dependency
 

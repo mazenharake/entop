@@ -49,7 +49,7 @@ else
 fi
 
 erl -noinput -hidden $PATHS +A 20 +Bc \
-    -eval "entop:main(['${TARGETNODE}','${COOKIE}'])" $@
+    -eval "entop:main(['${TARGETNODE}','${COOKIE}'])." "$@"
 
 CODE=$?
 if [[ $CODE -eq 101 ]]; then

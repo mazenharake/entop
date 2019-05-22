@@ -26,11 +26,9 @@
 ##==============================================================================
 
 ## Shell script for running entop. See the function usage() for instructions.
-TARGETNODE=
-COOKIE=
 
 function usage() {
-    echo -e "Usage: ./entop <TARGETNODE> <COOKIE>"
+    echo -e "Usage: ./entop <TARGETNODE> [<COOKIE>]"
 }
 
 if [[ $# -lt 1 ]]; then
@@ -41,7 +39,7 @@ fi
 TARGETNODE=$1
 shift
 
-COOKIE=$1
+COOKIE=${1-undefined}
 shift
 
 if [[ -d _build ]] ; then

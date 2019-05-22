@@ -20,7 +20,7 @@ then you can copy the entop script to a bin directory
 ## Usage
 To run entop make sure you have Erlang installed, cecho and entop libraries installed, and that the script is in your path.
 
-    Usage: ./entop <TARGETNODE> <COOKIE>
+    Usage: ./entop <TARGETNODE> [<COOKIE>]
 
 ### An example of how you run entop:
 
